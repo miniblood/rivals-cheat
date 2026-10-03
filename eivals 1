@@ -172,15 +172,23 @@ TriggerBtn.MouseButton1Click:Connect(function()
     }):Play()
 end)
 
-local function clearESP()
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p.Character then
-            for _, obj in ipairs(p.Character:GetChildren()) do
-                if obj.Name == "VHEffect_Box" then obj:Destroy() end
-            end
-            local hrp = p.Character:FindFirstChild("HumanoidRootPart")
-            if hrp and hrp:FindFirstChild("ESP_UI") then hrp.ESP_UI:Destroy() end
-        end
+-- Таблица для хранения Drawing-объектов
+local ESP_Cache = {}
+
+local function createDrawingESP(player)
+    if ESP_Cache[player] then return end
+    ESP_Cache[player] = {
+        Box = Drawing.new("Square"),
+        HealthBg = Drawing.new("Square"),
+        HealthBar = Drawing.new("Square"),
+        Name = Drawing.new("Text")
+    }
+end
+
+local function removeDrawingESP(player)
+    if ESP_Cache[player] then
+        for _, obj in pairs(ESP_Cache[player]) do obj:Remove() end
+        ESP_Cache[player] = nil
     end
 end
 
@@ -190,8 +198,12 @@ EspBtn.MouseButton1Click:Connect(function()
     TweenService:Create(EspInd, TweenInfo.new(0.2), {
         BackgroundColor3 = ESPEnabled and Color3.fromRGB(240, 240, 240) or Color3.fromRGB(120, 120, 125)
     }):Play()
-    if not ESPEnabled then clearESP() end
+    if not ESPEnabled then
+        for p, _ in pairs(ESP_Cache) do removeDrawingESP(p) end
+    end
 end)
+
+Players.PlayerRemoving:Connect(removeDrawingESP)
 
 SmoothBtn.MouseButton1Click:Connect(function()
     if TweensActive or MainPanel.BackgroundTransparency > 0.5 then return end
@@ -256,7 +268,8 @@ task.spawn(function()
     end
 end)
 
-RunService.Heartbeat:Connect(function()
+-- Рендеринг бессмертного 2D ESP через системный оверлей Drawing
+RunService.RenderStepped:Connect(function()
     if not ESPEnabled then return end
     for _, p in ipairs(Players:GetPlayers()) do
         if p ~= LocalPlayer and p.Character and (p.Team ~= LocalPlayer.Team or not p.Team) then
@@ -264,41 +277,58 @@ RunService.Heartbeat:Connect(function()
             local hrp = p.Character:FindFirstChild("HumanoidRootPart")
             
             if hum and hum.Health > 0 and hrp then
-                local ad = p.Character:FindFirstChild("VHEffect_Box") or Instance.new("BoxHandleAdornment")
-                ad.Name = "VHEffect_Box"
-                ad.Size = p.Character:GetExtentsSize() + Vector3.new(0.2, 0.2, 0.2)
-                ad.AlwaysOnTop, ad.ZIndex, ad.Color3, ad.Transparency = true, 5, Color3.fromRGB(60, 60, 62), 0.8
-                ad.Adornee, ad.Parent = p.Character, p.Character
+                local charPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
                 
-                local bb = hrp:FindFirstChild("ESP_UI") or Instance.new("BillboardGui")
-                bb.Name, bb.Size, bb.AlwaysOnTop, bb.Parent = "ESP_UI", UDim2.new(4, 0, 5.5, 0), true, hrp
-                
-                local nick = bb:FindFirstChild("Nick") or Instance.new("TextLabel", bb)
-                nick.Name = "Nick"
-                nick.Size, nick.Position, nick.BackgroundTransparency = UDim2.new(1, 0, 0, 15), UDim2.new(0, 0, 0, -20), 1
-                nick.TextColor3, nick.Font, nick.TextSize, nick.Text = Color3.fromRGB(240, 240, 240), Enum.Font.GothamBold, 10, p.Name
-                
-                local healthBg = bb:FindFirstChild("HealthBg") or Instance.new("Frame", bb)
-                healthBg.Name = "HealthBg"
-                healthBg.Size, healthBg.Position, healthBg.BackgroundColor3, healthBg.BorderSizePixel = UDim2.new(0, 4, 1, 0), UDim2.new(0, -10, 0, 0), Color3.fromRGB(25, 25, 25), 0
-                
-                local healthBar = healthBg:FindFirstChild("HealthBar") or Instance.new("Frame", healthBg)
-                healthBar.Name = "HealthBar"
-                healthBar.BorderSizePixel = 0
-                
-                local healthRatio = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
-                healthBar.Size = UDim2.new(1, 0, healthRatio, 0)
-                healthBar.Position = UDim2.new(0, 0, 1 - healthRatio, 0)
-                
-                -- РАСЧЕТ ДИНАМИЧЕСКОГО СИНЕ-ЧЕРНОГО ПЕРЕЛИВА ПО СИНУСОИДЕ
-                local wave = (math.sin(tick() * 4) + 1) / 2 -- Плавное изменение от 0 до 1
-                local blueColor = Color3.fromRGB(0, 100, 255)
-                local blackColor = Color3.fromRGB(15, 15, 15)
-                healthBar.BackgroundColor3 = blueColor:Lerp(blackColor, wave * (1 - healthRatio * 0.5))
+                if onScreen then
+                    createDrawingESP(p)
+                    local cache = ESP_Cache[p]
+                    
+                    -- Вычисление размеров динамического 2D бокса на экране
+                    local head = p.Character:FindFirstChild("Head")
+                    local headPos = head and Camera:WorldToViewportPoint(head.Position) or charPos
+                    local height = math.abs(headPos.Y - charPos.Y) * 3
+                    local width = height / 1.6
+                    
+                    -- Настройка 2D рамки игрока
+                    cache.Box.Visible = true
+                    cache.Box.Size = Vector2.new(width, height)
+                    cache.Box.Position = Vector2.new(charPos.X - width/2, charPos.Y - height/2)
+                    cache.Box.Color = Color3.fromRGB(45, 45, 48) -- Строгий серый бокс
+                    cache.Box.Thickness = 1.5
+                    
+                    -- Текстовый ник
+                    cache.Name.Visible = true
+                    cache.Name.Text = p.Name
+                    cache.Name.Size = 14
+                    cache.Name.Center = true
+                    cache.Name.Outline = true
+                    cache.Name.Color = Color3.fromRGB(240, 240, 240)
+                    cache.Name.Position = Vector2.new(charPos.X, (charPos.Y - height/2) - 18)
+                    
+                    -- Задний фон полоски ХП
+                    cache.HealthBg.Visible = true
+                    cache.HealthBg.Size = Vector2.new(3, height)
+                    cache.HealthBg.Position = Vector2.new((charPos.X - width/2) - 6, charPos.Y - height/2)
+                    cache.HealthBg.Color = Color3.fromRGB(25, 25, 25)
+                    cache.HealthBg.Filled = true
+                    
+                    -- Анимированная сине-черная полоска ХП
+                    local healthRatio = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
+                    cache.HealthBar.Visible = true
+                    cache.HealthBar.Size = Vector2.new(3, height * healthRatio)
+                    cache.HealthBar.Position = Vector2.new((charPos.X - width/2) - 6, (charPos.Y + height/2) - (height * healthRatio))
+                    cache.HealthBar.Filled = true
+                    
+                    local wave = (math.sin(tick() * 4) + 1) / 2
+                    cache.HealthBar.Color = Color3.fromRGB(0, 100, 255):Lerp(Color3.fromRGB(15, 15, 15), wave * (1 - healthRatio * 0.5))
+                else
+                    removeDrawingESP(p)
+                end
             else
-                for _, obj in ipairs(p.Character:GetChildren()) do if obj.Name == "VHEffect_Box" then obj:Destroy() end end
-                if hrp and hrp:FindFirstChild("ESP_UI") then hrp.ESP_UI:Destroy() end
+                removeDrawingESP(p)
             end
+        else
+            removeDrawingESP(p)
         end
     end
 end)
