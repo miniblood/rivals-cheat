@@ -1,60 +1,25 @@
-local TS = game:GetService("TweenService")
+local UIS = game:GetService("UserInputService")
 _G.BloodHack = _G.BloodHack or {}
 
-local tc = Instance.new("Frame", _G.BloodHack.CanvasGroup)
-tc.Size = UDim2.new(1, -24, 0, 30)
-tc.Position = UDim2.new(0, 12, 0, 35)
-tc.BackgroundTransparency = 1
+_G.BloodHack.AimbotEnabled = false
+_G.BloodHack.TriggerbotEnabled = false
+_G.BloodHack.ESPEnabled = false
+_G.BloodHack.SMOOTHNESS = 3
+_G.BloodHack.FOV_RADIUS = 120
+_G.BloodHack.TARGET_PART = "Head"
+_G.BloodHack.AIM_KEY = Enum.KeyCode.E
+_G.BloodHack.TOGGLE_KEY = Enum.KeyCode.Insert
+_G.BloodHack.Holding = false
+_G.BloodHack.MenuVisible = true
+_G.BloodHack.TweensActive = false
+_G.BloodHack.CurrentTab = "Main"
 
-local mt = Instance.new("TextButton", tc)
-mt.Size = UDim2.new(0, 65, 1, 0)
-mt.BackgroundColor3 = Color3.fromRGB(110, 60, 255)
-mt.Text = "Main"
-mt.TextColor3 = Color3.fromRGB(255, 255, 255)
-mt.Font = Enum.Font.GothamBold
-mt.TextSize = 11
-Instance.new("UICorner", mt).CornerRadius = UDim.new(0, 6)
-
-local vt = Instance.new("TextButton", tc)
-vt.Size = UDim2.new(0, 65, 1, 0)
-vt.Position = UDim2.new(0, 72, 0, 0)
-vt.BackgroundColor3 = Color3.fromRGB(25, 25, 28)
-vt.Text = "Visual"
-vt.TextColor3 = Color3.fromRGB(160, 160, 165)
-vt.Font = Enum.Font.GothamBold
-vt.TextSize = 11
-Instance.new("UICorner", vt).CornerRadius = UDim.new(0, 6)
-Instance.new("UIStroke", vt).Color = Color3.fromRGB(40, 40, 45)
-
-local ct = Instance.new("Frame", _G.BloodHack.CanvasGroup)
-ct.Size = UDim2.new(1, -24, 1, -85)
-ct.Position = UDim2.new(0, 12, 0, 75)
-ct.BackgroundTransparency = 1
-
-_G.BloodHack.MainFrame = Instance.new("Frame", ct)
-_G.BloodHack.MainFrame.Size = UDim2.new(1, 0, 1, 0)
-_G.BloodHack.MainFrame.BackgroundTransparency = 1
-
-_G.BloodHack.VisualFrame = Instance.new("Frame", ct)
-_G.BloodHack.VisualFrame.Size = UDim2.new(1, 0, 1, 0)
-_G.BloodHack.VisualFrame.BackgroundTransparency = 1
-_G.BloodHack.VisualFrame.Visible = false
-
-local function switchTab(tab)
-    _G.BloodHack.CurrentTab = tab
-    _G.BloodHack.MainFrame.Visible = (tab == "Main")
-    _G.BloodHack.VisualFrame.Visible = (tab == "Visual")
-    local c1 = (tab == "Main") and Color3.fromRGB(110,60,255) 
-        or Color3.fromRGB(25,25,28)
-    local c2 = (tab == "Visual") and Color3.fromRGB(110,60,255) 
-        or Color3.fromRGB(25,25,28)
-    TS:Create(mt, TweenInfo.new(0.2), {BackgroundColor3 = c1}):Play()
-    TS:Create(vt, TweenInfo.new(0.2), {BackgroundColor3 = c2}):Play()
-end
-
-mt.MouseButton1Click:Connect(function() switchTab("Main") end)
-vt.MouseButton1Click:Connect(function() switchTab("Visual") end)
-local UIS = game:GetService("UserInputService")
+-- Список доступных кастомных цветов
+_G.BloodHack.ColorsList = {
+    Color3.fromRGB(255, 50, 50),   -- Красный
+    Color3.fromRGB(140, 60, 255),  -- Фиолетовый
+    Color3.fromRGB(50, 255, 50),   -- Зеленый
+    Color3.fromRGB(50, 200, 255),  -- Голубойlocal UIS = game:GetService("UserInputService")
 local TS = game:GetService("TweenService")
 _G.BloodHack = _G.BloodHack or {}
 
@@ -123,6 +88,28 @@ _G.BloodHack.createSwitch("Show Wallhack ESP+", 0,
             _G.BloodHack.removeDrawingESP(p) 
         end 
     end
+end)
+
+-- 🎨 КНОПКА СМЕНЫ ЦВЕТА ESP ВО ВКЛАДКЕ VISUAL
+local clr = _G.BloodHack.createMenuRow("ESP Custom Color", 46, _G.BloodHack.VisualFrame)
+local clb = Instance.new("TextButton", clr)
+clb.Size = UDim2.new(0, 80, 0, 24)
+clb.Position = UDim2.new(1, -92, 0.5, -12)
+clb.BackgroundColor3 = _G.BloodHack.ESP_Color
+clb.Text = _G.BloodHack.ColorNames[1]
+clb.TextColor3 = Color3.fromRGB(255, 255, 255)
+clb.Font = Enum.Font.GothamBold
+clb.TextSize = 11
+Instance.new("UICorner", clb).CornerRadius = UDim.new(0, 4)
+clb.MouseButton1Click:Connect(function()
+    local idx = _G.BloodHack.CurrentColorIndex
+    idx = idx >= #_G.BloodHack.ColorsList and 1 or idx + 1
+    _G.BloodHack.CurrentColorIndex = idx
+    _G.BloodHack.ESP_Color = _G.BloodHack.ColorsList[idx]
+    clb.Text = _G.BloodHack.ColorNames[idx]
+    TS:Create(clb, TweenInfo.new(0.2), {
+        BackgroundColor3 = _G.BloodHack.ESP_Color
+    }):Play()
 end)
 
 _G.BloodHack.setMenuVisible = function(visible)
@@ -215,6 +202,7 @@ RS.RenderStepped:Connect(function()
         end
     end
 
+    -- 👁️ ПОЛНОСТЬЮ ИСПРАВЛЕННЫЙ ЦИКЛ ESP С НАСТРОЙКОЙ КАСТОМНОГО ЦВЕТА
     if _G.BloodHack.ESPEnabled then
         for _, p in pairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character then
@@ -239,13 +227,16 @@ RS.RenderStepped:Connect(function()
                     if onScreen then
                         local sx, sy = 2000 / vec.Z, 3000 / vec.Z
                         local bx, by = vec.X - sx / 2, vec.Y - sy / 2
+                        local currentClr = _G.BloodHack.ESP_Color
 
+                        -- 1. Квадрат врага
                         c.Box.Size = Vector2.new(sx, sy)
                         c.Box.Position = Vector2.new(bx, by)
-                        c.Box.Color = Color3.fromRGB(255, 50, 50)
+                        c.Box.Color = currentClr
                         c.Box.Thickness = 1.5
                         c.Box.Visible = true
 
+                        -- 2. Никнейм
                         c.Name.Text = p.Name
                         c.Name.Size = 14
                         c.Name.Position = Vector2.new(vec.X - 
@@ -254,26 +245,29 @@ RS.RenderStepped:Connect(function()
                         c.Name.Outline = true
                         c.Name.Visible = true
 
+                        -- 3. Трейсеры (Линии)
                         c.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
                         c.Tracer.To = Vector2.new(vec.X, vec.Y + (sy / 2))
-                        c.Tracer.Color = Color3.fromRGB(110, 60, 255)
+                        c.Tracer.Color = currentClr
                         c.Tracer.Thickness = 1
                         c.Tracer.Visible = true
 
+                        -- 4. Полоска ХП
                         local hpPct = hum.Health / hum.MaxHealth
                         local hBarY = sy * hpPct
                         c.HealthBar.From = Vector2.new(bx - 5, by + sy)
                         c.HealthBar.To = Vector2.new(bx - 5, (by + sy) - hBarY)
-                        c.HealthBar.Color = Color3.fromHSV(hpPct * 0.33, 1, 1)
+                        c.HealthBar.Color = Color3.fromHSV(hpPct * 0.33, 1, 1) -- Полоска ХП остается интуитивной (Грин -> Ред)
                         c.HealthBar.Thickness = 2.5
                         c.HealthBar.Visible = true
 
+                        -- 5. Текст дистанции
                         local myHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
                         local dMeters = myHrp and math.floor((hrp.Position - myHrp.Position).Magnitude) or 0
                         c.Dist.Text = "[" .. tostring(dMeters) .. "m]"
                         c.Dist.Size = 13
                         c.Dist.Position = Vector2.new(vec.X - c.Dist.TextBounds.X / 2, by + sy + 4)
-                        c.Dist.Color = Color3.fromRGB(200, 200, 200)
+                        c.Dist.Color = currentClr
                         c.Dist.Outline = true
                         c.Dist.Visible = true
                     else
@@ -290,3 +284,20 @@ RS.RenderStepped:Connect(function()
 end)
 
 _G.BloodHack.setMenuVisible(true)
+
+    Color3.fromRGB(255, 255, 255)  -- Белый
+}
+_G.BloodHack.ColorNames = {
+    "Red", "Purple", "Green", "Cyan", "White"
+}
+_G.BloodHack.CurrentColorIndex = 1
+_G.BloodHack.ESP_Color = _G.BloodHack.ColorsList[1]
+
+local circle = Drawing.new("Circle")
+circle.Thickness = 1.5
+circle.Color = Color3.fromRGB(110, 60, 255)
+circle.Filled = false
+circle.Visible = false
+circle.Transparency = 0.5
+circle.Radius = _G.BloodHack.FOV_RADIUS
+_G.BloodHack.FOVCircle = circle
