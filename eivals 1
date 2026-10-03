@@ -13,7 +13,7 @@ local Holding, MenuVisible, TweensActive = false, true, false
 
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Thickness = 1.5
-FOVCircle.Color = Color3.fromRGB(0, 210, 255)
+FOVCircle.Color = Color3.fromRGB(200, 200, 200) -- Спокойный серый круг FOV
 FOVCircle.Filled = false
 FOVCircle.Visible = false
 FOVCircle.Transparency = 0.5
@@ -35,37 +35,34 @@ ScreenGui.Name, ScreenGui.ResetOnSpawn = "RivalsUltimateMenu", false
 local MainPanel = Instance.new("Frame", ScreenGui)
 MainPanel.Size = UDim2.new(0, 260, 0, 350)
 MainPanel.Position = UDim2.new(0.5, -130, 0.5, 300)
-MainPanel.BackgroundColor3 = Color3.fromRGB(11, 12, 15)
+MainPanel.BackgroundColor3 = Color3.fromRGB(18, 18, 18) -- Глубокий матовый черный
 MainPanel.BackgroundTransparency = 1
 MainPanel.BorderSizePixel = 0
 MainPanel.Active, MainPanel.Draggable = true, true
-Instance.new("UICorner", MainPanel).CornerRadius = UDim.new(0, 14)
+Instance.new("UICorner", MainPanel).CornerRadius = UDim.new(0, 10)
 
 local UIStroke = Instance.new("UIStroke", MainPanel)
-UIStroke.Thickness, UIStroke.Transparency = 1.5, 1
-local Grad = Instance.new("UIGradient", UIStroke)
-Grad.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 210, 255)), 
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(140, 0, 255))
-})
+UIStroke.Thickness = 1.5
+UIStroke.Color = Color3.fromRGB(45, 45, 48) -- Строгая темно-серая обводка панели
+UIStroke.Transparency = 1
 local Header = Instance.new("Frame", MainPanel)
 Header.Size = UDim2.new(1, 0, 0, 48)
-Header.BackgroundColor3 = Color3.fromRGB(18, 19, 24)
+Header.BackgroundColor3 = Color3.fromRGB(28, 28, 30) -- Графитовый серый для шапки
 Header.BackgroundTransparency = 1
 Header.BorderSizePixel = 0
-Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 14)
+Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 10)
 
 local HeaderFix = Instance.new("Frame", Header)
 HeaderFix.Size = UDim2.new(1, 0, 0, 10)
 HeaderFix.Position = UDim2.new(0, 0, 1, -10)
-HeaderFix.BackgroundColor3 = Color3.fromRGB(18, 19, 24)
+HeaderFix.BackgroundColor3 = Color3.fromRGB(28, 28, 30)
 HeaderFix.BackgroundTransparency = 1
 HeaderFix.BorderSizePixel = 0
 
 local Title = Instance.new("TextLabel", Header)
 Title.Size = UDim2.new(1, 0, 1, 0)
-Title.Text = "RIVALS X PREMIUM"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Text = "RIVALS PREMIUM"
+Title.TextColor3 = Color3.fromRGB(240, 240, 240) -- Мягкий белый текст
 Title.TextTransparency = 1
 Title.BackgroundTransparency = 1
 Title.Font = Enum.Font.GothamBold
@@ -81,24 +78,26 @@ local function createModernBtn(text, pos, isToggle)
     btn.Size = UDim2.new(0, 230, 0, 42)
     btn.Position = UDim2.new(0.5, -115, 0, pos)
     btn.Text = isToggle and "  "..text or text
-    btn.BackgroundColor3 = Color3.fromRGB(22, 24, 30)
+    btn.BackgroundColor3 = Color3.fromRGB(28, 28, 30) -- Серые кнопки
     btn.BackgroundTransparency = 1
-    btn.TextColor3 = Color3.fromRGB(170, 175, 190)
+    btn.TextColor3 = Color3.fromRGB(200, 200, 200)
     btn.TextTransparency = 1
     btn.Font = Enum.Font.GothamSemibold
     btn.TextSize = 13
     btn.TextXAlignment = isToggle and Enum.TextXAlignment.Left or Enum.TextXAlignment.Center
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
     
     local s = Instance.new("UIStroke", btn)
-    s.Thickness, s.Color, s.Transparency = 1, Color3.fromRGB(35, 38, 48), 1
+    s.Thickness = 1
+    s.Color = Color3.fromRGB(45, 45, 48) -- Аккуратные границы кнопок
+    s.Transparency = 1
     
     local ind = nil
     if isToggle then
         ind = Instance.new("Frame", btn)
         ind.Size = UDim2.new(0, 8, 0, 8)
         ind.Position = UDim2.new(1, -22, 0.5, -4)
-        ind.BackgroundColor3 = Color3.fromRGB(255, 65, 65)
+        ind.BackgroundColor3 = Color3.fromRGB(120, 120, 125) -- Серый индикатор (выключено)
         ind.BackgroundTransparency = 1
         Instance.new("UICorner", ind).CornerRadius = UDim.new(1, 0)
     end
@@ -114,7 +113,7 @@ local FooterHint = Instance.new("TextLabel", Canvas)
 FooterHint.Size = UDim2.new(1, 0, 0, 20)
 FooterHint.Position = UDim2.new(0, 0, 1, -25)
 FooterHint.Text = "Нажмите [INSERT] чтобы скрыть"
-FooterHint.TextColor3 = Color3.fromRGB(90, 95, 110)
+FooterHint.TextColor3 = Color3.fromRGB(140, 140, 145)
 FooterHint.TextTransparency = 1
 FooterHint.BackgroundTransparency = 1
 FooterHint.Font = Enum.Font.Gotham
@@ -127,7 +126,7 @@ local function animateMenu(show)
     
     TweenService:Create(MainPanel, ease, {
         Position = show and UDim2.new(0.5, -130, 0.5, -175) or UDim2.new(0.5, -130, 0.5, 350), 
-        BackgroundTransparency = show and 0.05 or 1
+        BackgroundTransparency = show and 0 or 1
     }):Play()
     
     TweenService:Create(Header, ease, {BackgroundTransparency = show and 0 or 1}):Play()
@@ -135,7 +134,7 @@ local function animateMenu(show)
     TweenService:Create(UIStroke, ease, {Transparency = show and 0 or 1}):Play()
     TweenService:Create(Title, ease, {TextTransparency = show and 0 or 1}):Play()
     TweenService:Create(FooterHint, ease, {TextTransparency = show and 0 or 1}):Play()
-    TweenService:Create(MenuBlur, ease, {Size = show and 12 or 0}):Play()
+    TweenService:Create(MenuBlur, ease, {Size = show and 8 or 0}):Play()
     
     for _, b in pairs({AimBtn, TriggerBtn, EspBtn, SmoothBtn}) do
         TweenService:Create(b, ease, {BackgroundTransparency = show and 0 or 1, TextTransparency = show and 0 or 1}):Play()
@@ -161,7 +160,7 @@ AimBtn.MouseButton1Click:Connect(function()
     AimbotEnabled = not AimbotEnabled
     FOVCircle.Visible = AimbotEnabled
     TweenService:Create(AimInd, TweenInfo.new(0.2), {
-        BackgroundColor3 = AimbotEnabled and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(255, 65, 65)
+        BackgroundColor3 = AimbotEnabled and Color3.fromRGB(240, 240, 240) or Color3.fromRGB(120, 120, 125)
     }):Play()
 end)
 
@@ -169,7 +168,7 @@ TriggerBtn.MouseButton1Click:Connect(function()
     if TweensActive or MainPanel.BackgroundTransparency > 0.5 then return end
     TriggerbotEnabled = not TriggerbotEnabled
     TweenService:Create(TriggerInd, TweenInfo.new(0.2), {
-        BackgroundColor3 = TriggerbotEnabled and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(255, 65, 65)
+        BackgroundColor3 = TriggerbotEnabled and Color3.fromRGB(240, 240, 240) or Color3.fromRGB(120, 120, 125)
     }):Play()
 end)
 
@@ -177,7 +176,7 @@ EspBtn.MouseButton1Click:Connect(function()
     if TweensActive or MainPanel.BackgroundTransparency > 0.5 then return end
     ESPEnabled = not ESPEnabled
     TweenService:Create(EspInd, TweenInfo.new(0.2), {
-        BackgroundColor3 = ESPEnabled and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(255, 65, 65)
+        BackgroundColor3 = ESPEnabled and Color3.fromRGB(240, 240, 240) or Color3.fromRGB(120, 120, 125)
     }):Play()
     if not ESPEnabled then
         for _, p in ipairs(Players:GetPlayers()) do
@@ -262,8 +261,13 @@ task.spawn(function()
                     local hum = p.Character:FindFirstChildOfClass("Humanoid")
                     if hum and hum.Health > 0 then
                         local hl = p.Character:FindFirstChild("VHEffect") or Instance.new("Highlight")
-                        hl.Name, hl.FillColor, hl.FillTransparency = "VHEffect", Color3.fromRGB(0, 210, 255), 0.6
-                        hl.OutlineColor, hl.OutlineTransparency, hl.Parent = Color3.fromRGB(255, 255, 255), 0.2, p.Character
+                        hl.Name = "VHEffect"
+                        hl.FillOriginalColors = true
+                        hl.FillColor = Color3.fromRGB(255, 255, 255)
+                        hl.FillTransparency = 0.8 -- Очень легкий белый силуэт сквозь стены
+                        hl.OutlineColor = Color3.fromRGB(200, 200, 200)
+                        hl.OutlineTransparency = 0.3
+                        hl.Parent = p.Character
                         
                         if p.Character:FindFirstChild("Head") then
                             local bb = p.Character.Head:FindFirstChild("ESP_Billboard") or Instance.new("BillboardGui")
@@ -271,7 +275,7 @@ task.spawn(function()
                             
                             local tl = bb:FindFirstChild("TextLabel") or Instance.new("TextLabel", bb)
                             tl.Size, tl.BackgroundTransparency = UDim2.new(1, 0, 1, 0), 1
-                            tl.TextColor3, tl.Font, tl.TextSize = Color3.fromRGB(0, 255, 150), Enum.Font.GothamBold, 11
+                            tl.TextColor3, tl.Font, tl.TextSize = Color3.fromRGB(240, 240, 240), Enum.Font.GothamBold, 11
                             tl.Text = p.Name .. " [" .. math.floor(hum.Health) .. " HP]"
                         end
                     else
