@@ -1,12 +1,6 @@
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
 local UIS = game:GetService("UserInputService")
-local RS = game:GetService("RunService")
-local TS = game:GetService("TweenService")
-local CoreGui = game:GetService("CoreGui")
-
 _G.BloodHack = _G.BloodHack or {}
+
 _G.BloodHack.AimbotEnabled = false
 _G.BloodHack.TriggerbotEnabled = false
 _G.BloodHack.ESPEnabled = false
@@ -17,31 +11,34 @@ _G.BloodHack.AIM_KEY = Enum.KeyCode.E
 _G.BloodHack.TOGGLE_KEY = Enum.KeyCode.Insert
 _G.BloodHack.Holding = false
 _G.BloodHack.MenuVisible = true
+_G.BloodHack.TweensActive = false
+_G.BloodHack.CurrentTab = "Main"
 
---// Создание круга FOV для Аимбота
 local circle = Drawing.new("Circle")
 circle.Thickness = 1.5
 circle.Color = Color3.fromRGB(110, 60, 255)
 circle.Filled = false
 circle.Visible = false
-circle.Transparency = 0.7
+circle.Transparency = 0.5
 circle.Radius = _G.BloodHack.FOV_RADIUS
 _G.BloodHack.FOVCircle = circle
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local UIS = game:GetService("UserInputService")
 
---// Функция полной очистки ESP
+_G.BloodHack = _G.BloodHack or {}
+_G.BloodHack.ESP_Cache = {}
+
 _G.BloodHack.removeDrawingESP = function(p)
-    if p.Character then
-        local hl = p.Character:FindFirstChild("BloodHack_Highlight")
-        if hl then hl:Destroy() end
-        local head = p.Character:FindFirstChild("Head")
-        if head then
-            local bb = head:FindFirstChild("BloodHack_ESP")
-            if bb then bb:Destroy() end
-        end
+    local cache = _G.BloodHack.ESP_Cache[p]
+    if cache then
+        if cache.Box then cache.Box:Remove() end
+        if cache.Name then cache.Name:Remove() end
+        _G.BloodHack.ESP_Cache[p] = nil
     end
 end
 
---// Функция поиска ближайшего врага к прицелу
 _G.BloodHack.getClosestPlayer = function()
     local target = nil
     local shortest = _G.BloodHack.FOV_RADIUS
@@ -49,14 +46,22 @@ _G.BloodHack.getClosestPlayer = function()
 
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= LocalPlayer and p.Character then
-            local part = p.Character:FindFirstChild(_G.BloodHack.TARGET_PART)
-            local hum = p.Character:FindFirstChildOfClass("Humanoid")
+            local part = p.Character:FindFirstChild(
+                _G.BloodHack.TARGET_PART
+            )
+            local hum = p.Character:FindFirstChildOfClass(
+                "Humanoid"
+            )
             if part and hum and hum.Health > 0 then
-                if p.Team == LocalPlayer.Team and p.Team ~= nil then continue end
+                if p.Team == LocalPlayer.Team and 
+                   p.Team ~= nil then continue end
                 
-                local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
+                local pos, onScreen = 
+                    Camera:WorldToViewportPoint(part.Position)
+                
                 if onScreen then
-                    local dist = (Vector2.new(pos.X, pos.Y) - mouse).Magnitude
+                    local dist = (Vector2.new(pos.X, pos.Y) 
+                                 - mouse).Magnitude
                     if dist < shortest then
                         target = p
                         shortest = dist
@@ -67,18 +72,24 @@ _G.BloodHack.getClosestPlayer = function()
     end
     return target
 end
-local TargetParent = CoreGui:FindFirstChild("RobloxGui") or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
+local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+local TargetParent = CoreGui:FindFirstChild("RobloxGui") 
+    or CoreGui or Players.LocalPlayer:WaitForChild("PlayerGui")
+
 if TargetParent:FindFirstChild("BloodHackRivals") then 
     TargetParent.BloodHackRivals:Destroy() 
 end
+
+_G.BloodHack = _G.BloodHack or {}
 
 local sg = Instance.new("ScreenGui", TargetParent)
 sg.Name, sg.ResetOnSpawn = "BloodHackRivals", false
 _G.BloodHack.ScreenGui = sg
 
 local mp = Instance.new("Frame", sg)
-mp.Size = UDim2.new(0, 300, 0, 350)
-mp.Position = UDim2.new(0.5, -150, 0.5, -175)
+mp.Size = UDim2.new(0, 0, 0, 0)
+mp.Position = UDim2.new(0.5, 0, 0.5, 0)
 mp.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 mp.BorderSizePixel = 0
 mp.Active, mp.Draggable = true, true
@@ -88,7 +99,7 @@ _G.BloodHack.MainPanel = mp
 local cg = Instance.new("CanvasGroup", mp)
 cg.Size = UDim2.new(1, 0, 1, 0)
 cg.BackgroundTransparency = 1
-cg.GroupTransparency = 0
+cg.GroupTransparency = 1
 _G.BloodHack.CanvasGroup = cg
 
 Instance.new("UICorner", mp).CornerRadius = UDim.new(0, 8)
@@ -135,28 +146,39 @@ _G.BloodHack.createSwitch = function(name, pos, def, frame, cb)
     local p = Instance.new("TextButton", r)
     p.Size = UDim2.new(0, 36, 0, 18)
     p.Position = UDim2.new(1, -48, 0.5, -9)
-    p.BackgroundColor3 = def and Color3.fromRGB(110,60,255) or Color3.fromRGB(45, 45, 50)
+    p.BackgroundColor3 = def and Color3.fromRGB(110,60,255) 
+        or Color3.fromRGB(45, 45, 50)
     p.Text = ""
     Instance.new("UICorner", p).CornerRadius = UDim.new(1, 0)
     
     local d = Instance.new("Frame", p)
     d.Size = UDim2.new(0, 12, 0, 12)
-    d.Position = def and UDim2.new(1, -15, 0.5, -6) or UDim2.new(0, 3, 0.5, -6)
+    d.Position = def and UDim2.new(1, -15, 0.5, -6) 
+        or UDim2.new(0, 3, 0.5, -6)
     d.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     Instance.new("UICorner", d).CornerRadius = UDim.new(1, 0)
     
     p.MouseButton1Click:Connect(function()
         def = not def
+        local TS = game:GetService("TweenService")
         TS:Create(p, TweenInfo.new(0.2), {
-            BackgroundColor3 = def and Color3.fromRGB(110,60,255) or Color3.fromRGB(45, 45, 50)
+            BackgroundColor3 = def and Color3.fromRGB(110,60,255) 
+                or Color3.fromRGB(45, 45, 50)
         }):Play()
         TS:Create(d, TweenInfo.new(0.2), {
-            Position = def and UDim2.new(1, -15, 0.5, -6) or UDim2.new(0, 3, 0.5, -6)
+            Position = def and UDim2.new(1, -15, 0.5, -6) 
+                or UDim2.new(0, 3, 0.5, -6)
         }):Play()
         cb(def)
     end)
 end
---// Настройка табов и страниц
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local UIS = game:GetService("UserInputService")
+local RS = game:GetService("RunService")
+local TS = game:GetService("TweenService")
+
 local tc = Instance.new("Frame", _G.BloodHack.CanvasGroup)
 tc.Size = UDim2.new(1, -24, 0, 30)
 tc.Position = UDim2.new(0, 12, 0, 35)
@@ -200,8 +222,10 @@ local function switchTab(tab)
     _G.BloodHack.CurrentTab = tab
     mf.Visible = (tab == "Main")
     vf.Visible = (tab == "Visual")
-    local c1 = (tab == "Main") and Color3.fromRGB(110,60,255) or Color3.fromRGB(25,25,28)
-    local c2 = (tab == "Visual") and Color3.fromRGB(110,60,255) or Color3.fromRGB(25,25,28)
+    local c1 = (tab == "Main") and Color3.fromRGB(110,60,255) 
+        or Color3.fromRGB(25,25,28)
+    local c2 = (tab == "Visual") and Color3.fromRGB(110,60,255) 
+        or Color3.fromRGB(25,25,28)
     TS:Create(mt, TweenInfo.new(0.2), {BackgroundColor3 = c1}):Play()
     TS:Create(vt, TweenInfo.new(0.2), {BackgroundColor3 = c2}):Play()
 end
@@ -209,153 +233,188 @@ end
 mt.MouseButton1Click:Connect(function() switchTab("Main") end)
 vt.MouseButton1Click:Connect(function() switchTab("Visual") end)
 
---// Переключатели функций
-_G.BloodHack.createSwitch("Aimbot (Hold E)", 0, _G.BloodHack.AimbotEnabled, mf, function(v) 
+_G.BloodHack.createSwitch("Silent Aim (Key: E)", 0, 
+    _G.BloodHack.AimbotEnabled, mf, function(v) 
     _G.BloodHack.AimbotEnabled = v 
     _G.BloodHack.FOVCircle.Visible = v 
 end)
 
-_G.BloodHack.createSwitch("Triggerbot", 46, _G.BloodHack.TriggerbotEnabled, mf, function(v) 
+_G.BloodHack.createSwitch("Triggerbot", 46, 
+    _G.BloodHack.TriggerbotEnabled, mf, function(v) 
     _G.BloodHack.TriggerbotEnabled = v 
 end)
 
-_G.BloodHack.createSwitch("Beautiful ESP", 0, _G.BloodHack.ESPEnabled, vf, function(v) 
-    _G.BloodHack.ESPEnabled = v 
-    if not v then
-        for _, p in pairs(Players:GetPlayers()) do _G.BloodHack.removeDrawingESP(p) end
+local smr = _G.BloodHack.createMenuRow("Smoothness", 92, mf)
+local smb = Instance.new("TextButton", smr)
+smb.Size = UDim2.new(0, 80, 0, 24)
+smb.Position = UDim2.new(1, -92, 0.5, -12)
+smb.BackgroundColor3 = Color3.fromRGB(110, 60, 255)
+smb.Text = tostring(_G.BloodHack.SMOOTHNESS)
+smb.TextColor3 = Color3.fromRGB(255, 255, 255)
+smb.Font = Enum.Font.GothamBold
+smb.TextSize = 11
+Instance.new("UICorner", smb).CornerRadius = UDim.new(0, 4)
+smb.MouseButton1Click:Connect(function()
+    _G.BloodHack.SMOOTHNESS = _G.BloodHack.SMOOTHNESS >= 5 
+        and 1 or _G.BloodHack.SMOOTHNESS + 1
+    smb.Text = tostring(_G.BloodHack.SMOOTHNESS)
+end)
+
+local bnr = _G.BloodHack.createMenuRow("Target Body Part", 138, mf)
+local bnb = Instance.new("TextButton", bnr)
+bnb.Size = UDim2.new(0, 80, 0, 24)
+bnb.Position = UDim2.new(1, -92, 0.5, -12)
+bnb.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+bnb.Text = _G.BloodHack.TARGET_PART
+bnb.TextColor3 = Color3.fromRGB(200, 200, 200)
+bnb.Font = Enum.Font.GothamSemibold
+bnb.TextSize = 10
+Instance.new("UICorner", bnb).CornerRadius = UDim.new(0, 4)
+Instance.new("UIStroke", bnb).Color = Color3.fromRGB(55, 55, 60)
+bnb.MouseButton1Click:Connect(function()
+    _G.BloodHack.TARGET_PART = (_G.BloodHack.TARGET_PART == "Head") 
+        and "HumanoidRootPart" or "Head"
+    bnb.Text = (_G.BloodHack.TARGET_PART == "Head") 
+        and "Head" or "Chest"
+end)
+
+_G.BloodHack.createSwitch("Show Wallhack ESP+", 0, 
+    _G.BloodHack.ESPEnabled, vf, function(v)
+    _G.BloodHack.ESPEnabled = v
+    if not v then 
+        for p, _ in pairs(_G.BloodHack.ESP_Cache) do 
+            _G.BloodHack.removeDrawingESP(p) 
+        end 
     end
 end)
 
---// Функция прорисовки неонового ESP
-local function applyBeautifulESP(p)
-    if p == LocalPlayer or not p.Character then return end
-    if p.Team == LocalPlayer.Team and p.Team ~= nil then return end
-
-    local char = p.Character
-    local head = char:WaitForChild("Head", 5)
-    local hum = char:WaitForChild("Humanoid", 5)
-    if not head or not hum or hum.Health <= 0 then return end
-
-    if not char:FindFirstChild("BloodHack_Highlight") then
-        local hl = Instance.new("Highlight")
-        hl.Name = "BloodHack_Highlight"
-        hl.FillColor = Color3.fromRGB(110, 60, 255)
-        hl.FillTransparency = 0.6
-        hl.OutlineColor = Color3.fromRGB(160, 120, 255)
-        hl.OutlineTransparency = 0.1
-        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-        hl.Parent = char
-    end
-
-    if head and not head:FindFirstChild("BloodHack_ESP") then
-        local bb = Instance.new("BillboardGui")
-        bb.Name = "BloodHack_ESP"
-        bb.Size = UDim2.new(0, 120, 0, 45)
-        bb.AlwaysOnTop = true
-        bb.ExtentsOffset = Vector3.new(0, 2.5, 0)
-        bb.Parent = head
-
-        local nameLabel = Instance.new("TextLabel")
-        nameLabel.Size = UDim2.new(1, 0, 0, 15)
-        nameLabel.BackgroundTransparency = 1
-        nameLabel.Text = p.Name
-        nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-        nameLabel.Font = Enum.Font.GothamBold
-        nameLabel.TextSize = 12
-        Instance.new("UIStroke", nameLabel).Color = Color3.fromRGB(0, 0, 0)
-        nameLabel.Parent = bb
-
-        local healthBg = Instance.new("Frame")
-        healthBg.Size = UDim2.new(0, 70, 0, 5)
-        healthBg.Position = UDim2.new(0.5, -35, 0, 20)
-        healthBg.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-        healthBg.BorderSizePixel = 0
-        Instance.new("UICorner", healthBg).CornerRadius = UDim.new(1, 0)
-        healthBg.Parent = bb
-
-        local healthBar = Instance.new("Frame")
-        healthBar.Name = "Bar"
-        healthBar.Size = UDim2.new(hum.Health / hum.MaxHealth, 0, 1, 0)
-        healthBar.BackgroundColor3 = Color3.fromRGB(0, 255, 130)
-        healthBar.BorderSizePixel = 0
-        Instance.new("UICorner", healthBar).CornerRadius = UDim.new(1, 0)
-        healthBar.Parent = healthBg
-
-        local hpLabel = Instance.new("TextLabel")
-        hpLabel.Name = "HPText"
-        hpLabel.Size = UDim2.new(1, 0, 0, 12)
-        hpLabel.Position = UDim2.new(0, 0, 0, 28)
-        hpLabel.BackgroundTransparency = 1
-        hpLabel.Text = math.floor(hum.Health) .. " HP"
-        hpLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
-        hpLabel.Font = Enum.Font.GothamSemibold
-        hpLabel.TextSize = 10
-        Instance.new("UIStroke", hpLabel).Color = Color3.fromRGB(0, 0, 0)
-        hpLabel.Parent = bb
+local function setMenuVisible(visible)
+    if _G.BloodHack.TweensActive then return end
+    _G.BloodHack.TweensActive = true
+    local ti = TweenInfo.new(0.3, Enum.EasingStyle.Quart, 
+        Enum.EasingDirection.Out)
+    
+    if visible then
+        _G.BloodHack.MainPanel.Visible = true
+        TS:Create(_G.BloodHack.MainPanel, ti, {
+            Size = UDim2.new(0, 300, 0, 360), 
+            Position = UDim2.new(0.5, -150, 0.5, -180)
+        }):Play()
+        local a = TS:Create(_G.BloodHack.CanvasGroup, ti, {
+            GroupTransparency = 0
+        })
+        a:Play() a.Completed:Wait()
     else
-        local bb = head:FindFirstChild("BloodHack_ESP")
-        if bb then
-            local bar = bb:FindFirstChild("Bar", true)
-            local hpText = bb:FindFirstChild("HPText", true)
-            if bar and hpText then
-                TS:Create(bar, TweenInfo.new(0.1), {Size = UDim2.new(hum.Health / hum.MaxHealth, 0, 1, 0)}):Play()
-                bar.BackgroundColor3 = Color3.fromHSV(hum.Health / hum.MaxHealth * 0.35, 0.9, 0.9)
-                hpText.Text = math.floor(hum.Health) .. " HP"
-            end
-        end
+        TS:Create(_G.BloodHack.MainPanel, ti, {
+            Size = UDim2.new(0, 0, 0, 0), 
+            Position = UDim2.new(0.5, 0, 0.5, 0)
+        }):Play()
+        local a = TS:Create(_G.BloodHack.CanvasGroup, ti, {
+            GroupTransparency = 1
+        })
+        a:Play() a.Completed:Wait()
+        _G.BloodHack.MainPanel.Visible = false
     end
+    _G.BloodHack.TweensActive = false
 end
 
---// Обработка биндов клавиатуры
-UIS.InputBegan:Connect(function(input, gpe)
-    if gpe then return end
-    if input.KeyCode == _G.BloodHack.TOGGLE_KEY then
+UIS.InputBegan:Connect(function(i, p)
+    if not p and i.KeyCode == _G.BloodHack.TOGGLE_KEY then
         _G.BloodHack.MenuVisible = not _G.BloodHack.MenuVisible
-        _G.BloodHack.MainPanel.Visible = _G.BloodHack.MenuVisible
+        setMenuVisible(_G.BloodHack.MenuVisible)
+    elseif i.KeyCode == _G.BloodHack.AIM_KEY then
+        _G.BloodHack.Holding = true
     end
-    if input.KeyCode == _G.BloodHack.AIM_KEY then _G.BloodHack.Holding = true end
 end)
 
-UIS.InputEnded:Connect(function(input)
-    if input.KeyCode == _G.BloodHack.AIM_KEY then _G.BloodHack.Holding = false end
+UIS.InputEnded:Connect(function(i)
+    if i.KeyCode == _G.BloodHack.AIM_KEY then
+        _G.BloodHack.Holding = false
+    end
 end)
 
---// Главный рабочий цикл скрипта
 RS.RenderStepped:Connect(function()
-    local mouseLocation = UIS:GetMouseLocation()
-    circle.Position = mouseLocation
+    local mouse = UIS:GetMouseLocation()
+    _G.BloodHack.FOVCircle.Position = mouse
+    _G.BloodHack.FOVCircle.Radius = _G.BloodHack.FOV_RADIUS
 
-    if _G.BloodHack.AimbotEnabled and _G.BloodHack.Holding then
-        local target = _G.BloodHack.getClosestPlayer()
-        if target and target.Character then
-            local part = target.Character:FindFirstChild(_G.BloodHack.TARGET_PART)
+    if _G.BloodHack.AimbotEnabled and _G.BloodHack.Holding 
+       and _G.BloodHack.getClosestPlayer then
+        local t = _G.BloodHack.getClosestPlayer()
+        if t and t.Character then
+            local part = t.Character:FindFirstChild(
+                _G.BloodHack.TARGET_PART
+            )
             if part then
-                local pos = Camera:WorldToViewportPoint(part.Position)
-                mousemoverel((pos.X - mouseLocation.X) / _G.BloodHack.SMOOTHNESS, (pos.Y - mouseLocation.Y) / _G.BloodHack.SMOOTHNESS)
+                local pos, onScreen = 
+                    Camera:WorldToViewportPoint(part.Position)
+                if onScreen then
+                    local move = (Vector2.new(pos.X, pos.Y) 
+                                 - mouse) / _G.BloodHack.SMOOTHNESS
+                    if mousemoverel then mousemoverel(move.X, move.Y) end
+                end
             end
         end
     end
 
     if _G.BloodHack.TriggerbotEnabled then
-        local mousePos = UIS:GetMouseLocation()
-        local ray = Camera:ViewportPointToRay(mousePos.X, mousePos.Y)
-        local raycastResult = workspace:Raycast(ray.Origin, ray.Direction * 1000)
-        
-        if raycastResult and raycastResult.Instance then
-            local model = raycastResult.Instance:FindFirstAncestorOfClass("Model")
+        local r = Camera:ViewportPointToRay(mouse.X, mouse.Y)
+        local res = workspace:Raycast(r.Origin, r.Direction * 1000)
+        if res and res.Instance then
+            local model = res.Instance:FindFirstAncestorOfClass("Model")
             if model then
-                local player = Players:GetPlayerFromCharacter(model)
-                if player and player ~= LocalPlayer and (player.Team ~= LocalPlayer.Team or player.Team == nil) then
-                    local humanoid = model:FindFirstChildOfClass("Humanoid")
-                    if humanoid and humanoid.Health > 0 then mouse1click() end
+                local p = Players:GetPlayerFromCharacter(model)
+                if p and p ~= LocalPlayer and (p.Team ~= LocalPlayer.Team 
+                   or p.Team == nil) then
+                    if mouse1click then mouse1click() task.wait(0.07) end
                 end
             end
         end
     end
 
     if _G.BloodHack.ESPEnabled then
-        for _, p in pairs(Players:GetPlayers()) do applyBeautifulESP(p) end
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character then
+                local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+                local hum = p.Character:FindFirstChildOfClass("Humanoid")
+                if hrp and hum and hum.Health > 0 and 
+                   (p.Team ~= LocalPlayer.Team or p.Team == nil) then
+                    
+                    if not _G.BloodHack.ESP_Cache[p] then
+                        _G.BloodHack.ESP_Cache[p] = {
+                            Box = Drawing.new("Square"),
+                            Name = Drawing.new("Text")
+                        }
+                    end
+
+                    local c = _G.BloodHack.ESP_Cache[p]
+                    local vec, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+
+                    if onScreen then
+                        local sx, sy = 2000 / vec.Z, 3000 / vec.Z
+                        c.Box.Size = Vector2.new(sx, sy)
+                        c.Box.Position = Vector2.new(vec.X - sx/2, vec.Y - sy/2)
+                        c.Box.Color = Color3.fromRGB(255, 50, 50)
+                        c.Box.Thickness = 1.5
+                        c.Box.Filled = false
+                        c.Box.Visible = true
+
+                        c.Name.Text = p.Name
+                        c.Name.Size = 14
+                        c.Name.Position = Vector2.new(vec.X - 
+                            c.Name.TextBounds.X / 2, (vec.Y - sy / 2) - 16)
+                        c.Name.Color = Color3.fromRGB(255, 255, 255)
+                        c.Name.Outline = true
+                        c.Name.Visible = true
+                    else
+                        c.Box.Visible = false c.Name.Visible = false
+                    end
+                else
+                    _G.BloodHack.removeDrawingESP(p)
+                end
+            end
+        end
     end
 end)
 
-Players.PlayerRemoving:Connect(function(p) _G.BloodHack.removeDrawingESP(p) end)
+setMenuVisible(true)
