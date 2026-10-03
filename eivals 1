@@ -6,17 +6,10 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
 
-local AimbotEnabled = false
-local TriggerbotEnabled = false
-local ESPEnabled = false
-local SMOOTHNESS = 3
-local FOV_RADIUS = 120
-local TARGET_PART = "Head"
-local AIM_KEY = Enum.KeyCode.E -- АИМ ТЕПЕРЬ НА КЛАВИШУ Е
-local TOGGLE_KEY = Enum.KeyCode.Insert
-local Holding = false
-local MenuVisible = true
-local TweensActive = false
+local AimbotEnabled, TriggerbotEnabled, ESPEnabled = false, false, false
+local SMOOTHNESS, FOV_RADIUS, TARGET_PART = 3, 120, "Head"
+local AIM_KEY, TOGGLE_KEY = Enum.KeyCode.E, Enum.KeyCode.Insert
+local Holding, MenuVisible, TweensActive = false, true, false
 
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Thickness = 1.5
@@ -114,7 +107,7 @@ end
 
 local AimBtn, AimInd = createModernBtn("AIMBOT (KEY: E)", 15, true)
 local TriggerBtn, TriggerInd = createModernBtn("TRIGGERBOT", 65, true)
-local EspBtn, EspInd = createModernBtn("WALLHACK / ESP", 115, true)
+local EspBtn, EspInd = createModernBtn("WALLHACK / ESP+", 115, true)
 local SmoothBtn = createModernBtn("SMOOTHNESS: " .. SMOOTHNESS, 165, false)
 
 local FooterHint = Instance.new("TextLabel", Canvas)
@@ -188,7 +181,12 @@ EspBtn.MouseButton1Click:Connect(function()
     }):Play()
     if not ESPEnabled then
         for _, p in ipairs(Players:GetPlayers()) do
-            if p.Character and p.Character:FindFirstChild("VHEffect") then p.Character.VHEffect:Destroy() end
+            if p.Character then
+                if p.Character:FindFirstChild("VHEffect") then p.Character.VHEffect:Destroy() end
+                if p.Character:FindFirstChild("Head") and p.Character.Head:FindFirstChild("ESP_Billboard") then
+                    p.Character.Head.ESP_Billboard:Destroy()
+                end
+            end
         end
     end
 end)
@@ -228,9 +226,7 @@ RunService.RenderStepped:Connect(function()
             local pos, onScreen = Camera:WorldToViewportPoint(t.Character[TARGET_PART].Position)
             if onScreen and mousemoverel then
                 local mPos = UserInputService:GetMouseLocation()
-                local moveX = (pos.X - mPos.X) / SMOOTHNESS
-                local moveY = (pos.Y - mPos.Y) / SMOOTHNESS
-                mousemoverel(moveX, moveY)
+                mousemoverel((pos.X - mPos.X) / SMOOTHNESS, (pos.Y - mPos.Y) / SMOOTHNESS)
             end
         end
     end
@@ -249,10 +245,7 @@ task.spawn(function()
                     if player and player ~= LocalPlayer and (player.Team ~= LocalPlayer.Team or not player.Team) then
                         local humanoid = model:FindFirstChildOfClass("Humanoid")
                         if humanoid and humanoid.Health > 0 then
-                            if mouse1click then
-                                mouse1click()
-                                task.wait(0.05)
-                            end
+                            if mouse1click then mouse1click() task.wait(0.05) end
                         end
                     end
                 end
@@ -262,24 +255,32 @@ task.spawn(function()
 end)
 
 task.spawn(function()
-    while task.wait(0.4) do
+    while task.wait(0.3) do
         if ESPEnabled then
             for _, p in ipairs(Players:GetPlayers()) do
                 if p ~= LocalPlayer and p.Character and (p.Team ~= LocalPlayer.Team or not p.Team) then
                     local hum = p.Character:FindFirstChildOfClass("Humanoid")
                     if hum and hum.Health > 0 then
                         local hl = p.Character:FindFirstChild("VHEffect") or Instance.new("Highlight")
-                        hl.Name = "VHEffect"
-                        hl.FillColor = Color3.fromRGB(0, 210, 255)
-                        hl.FillTransparency = 0.6
-                        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-                        hl.OutlineTransparency = 0.2
-                        hl.Parent = p.Character
+                        hl.Name, hl.FillColor, hl.FillTransparency = "VHEffect", Color3.fromRGB(0, 210, 255), 0.6
+                        hl.OutlineColor, hl.OutlineTransparency, hl.Parent = Color3.fromRGB(255, 255, 255), 0.2, p.Character
+                        
+                        if p.Character:FindFirstChild("Head") then
+                            local bb = p.Character.Head:FindFirstChild("ESP_Billboard") or Instance.new("BillboardGui")
+                            bb.Name, bb.Size, bb.AlwaysOnTop, bb.ExtentsOffset, bb.Parent = "ESP_Billboard", UDim2.new(0, 200, 0, 50), true, Vector3.new(0, 2.5, 0), p.Character.Head
+                            
+                            local tl = bb:FindFirstChild("TextLabel") or Instance.new("TextLabel", bb)
+                            tl.Size, tl.BackgroundTransparency = UDim2.new(1, 0, 1, 0), 1
+                            tl.TextColor3, tl.Font, tl.TextSize = Color3.fromRGB(0, 255, 150), Enum.Font.GothamBold, 11
+                            tl.Text = p.Name .. " [" .. math.floor(hum.Health) .. " HP]"
+                        end
                     else
                         if p.Character:FindFirstChild("VHEffect") then p.Character.VHEffect:Destroy() end
+                        if p.Character:FindFirstChild("Head") and p.Character.Head:FindFirstChild("ESP_Billboard") then p.Character.Head.ESP_Billboard:Destroy() end
                     end
-                elseif p.Character and p.Character:FindFirstChild("VHEffect") then
-                    p.Character.VHEffect:Destroy()
+                elseif p.Character then
+                    if p.Character:FindFirstChild("VHEffect") then p.Character.VHEffect:Destroy() end
+                    if p.Character:FindFirstChild("Head") and p.Character.Head:FindFirstChild("ESP_Billboard") then p.Character.Head.ESP_Billboard:Destroy() end
                 end
             end
         end
