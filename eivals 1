@@ -172,7 +172,6 @@ TriggerBtn.MouseButton1Click:Connect(function()
     }):Play()
 end)
 
--- Таблица для хранения Drawing-объектов
 local ESP_Cache = {}
 
 local function createDrawingESP(player)
@@ -181,7 +180,8 @@ local function createDrawingESP(player)
         Box = Drawing.new("Square"),
         HealthBg = Drawing.new("Square"),
         HealthBar = Drawing.new("Square"),
-        Name = Drawing.new("Text")
+        Name = Drawing.new("Text"),
+        Info = Drawing.new("Text")
     }
 end
 
@@ -211,6 +211,7 @@ SmoothBtn.MouseButton1Click:Connect(function()
     SmoothBtn.Text = "SMOOTHNESS: " .. SMOOTHNESS
 end)
 
+-- Умный поиск цели с Wall Check (Проверкой на видимость за стеной)
 local function getClosestPlayer()
     if not AimbotEnabled and not TriggerbotEnabled then return nil end
     local closest, shortDist = nil, FOV_RADIUS
@@ -218,10 +219,23 @@ local function getClosestPlayer()
         if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and (p.Team ~= LocalPlayer.Team or not p.Team) then
             local hum = p.Character:FindFirstChildOfClass("Humanoid")
             if hum and hum.Health > 0 and p.Character:FindFirstChild(TARGET_PART) then
-                local pos, onScreen = Camera:WorldToViewportPoint(p.Character[TARGET_PART].Position)
+                local targetPart = p.Character[TARGET_PART]
+                local pos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
                 if onScreen then
-                    local dist = (Vector2.new(pos.X, pos.Y) - UserInputService:GetMouseLocation()).Magnitude
-                    if dist < shortDist then shortDist, closest = dist, p end
+                    -- WALL CHECK: Проверяем, видит ли луч деталь врага без препятствий
+                    local raycastParams = RaycastParams.new()
+                    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+                    raycastParams.FilterDescendantsInstances = {LocalPlayer.Character, Camera}
+                    
+                    local origin = Camera.CFrame.Position
+                    local direction = (targetPart.Position - origin).Unit * (targetPart.Position - origin).Magnitude
+                    local result = workspace:Raycast(origin, direction, raycastParams)
+                    
+                    -- Если луч ни обо что не ударился или попал в модельку этого же игрока -> враг виден!
+                    if not result or result.Instance:IsDescendantOf(p.Character) then
+                        local dist = (Vector2.new(pos.X, pos.Y) - UserInputService:GetMouseLocation()).Magnitude
+                        if dist < shortDist then shortDist, closest = dist, p end
+                    end
                 end
             end
         end
@@ -268,7 +282,7 @@ task.spawn(function()
     end
 end)
 
--- Рендеринг бессмертного 2D ESP через системный оверлей Drawing
+-- Рендеринг Drawing ESP (Ники + Дистанция + Оружие + Пульсирующее ХП)
 RunService.RenderStepped:Connect(function()
     if not ESPEnabled then return end
     for _, p in ipairs(Players:GetPlayers()) do
@@ -278,41 +292,39 @@ RunService.RenderStepped:Connect(function()
             
             if hum and hum.Health > 0 and hrp then
                 local charPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-                
                 if onScreen then
                     createDrawingESP(p)
                     local cache = ESP_Cache[p]
-                    
-                    -- Вычисление размеров динамического 2D бокса на экране
                     local head = p.Character:FindFirstChild("Head")
                     local headPos = head and Camera:WorldToViewportPoint(head.Position) or charPos
                     local height = math.abs(headPos.Y - charPos.Y) * 3
                     local width = height / 1.6
                     
-                    -- Настройка 2D рамки игрока
                     cache.Box.Visible = true
                     cache.Box.Size = Vector2.new(width, height)
                     cache.Box.Position = Vector2.new(charPos.X - width/2, charPos.Y - height/2)
-                    cache.Box.Color = Color3.fromRGB(45, 45, 48) -- Строгий серый бокс
-                    cache.Box.Thickness = 1.5
+                    cache.Box.Color, cache.Box.Thickness = Color3.fromRGB(45, 45, 48), 1.5
                     
-                    -- Текстовый ник
                     cache.Name.Visible = true
                     cache.Name.Text = p.Name
-                    cache.Name.Size = 14
-                    cache.Name.Center = true
-                    cache.Name.Outline = true
-                    cache.Name.Color = Color3.fromRGB(240, 240, 240)
-                    cache.Name.Position = Vector2.new(charPos.X, (charPos.Y - height/2) - 18)
+                    cache.Name.Size, cache.Name.Center, cache.Name.Outline, cache.Name.Color = 13, true, true, Color3.fromRGB(240, 240, 240)
+                    cache.Name.Position = Vector2.new(charPos.X, (charPos.Y - height/2) - 16)
                     
-                    -- Задний фон полоски ХП
+                    -- ДИНАМИЧЕСКИЙ ТЕКСТ ПОД НОГАМИ: Дистанция и Оружие в руках
+                    local distance = math.floor((LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and (hrp.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude) or 0)
+                    local tool = p.Character:FindFirstChildOfClass("Tool")
+                    local weaponName = tool and tool.Name or "Hands"
+                    
+                    cache.Info.Visible = true
+                    cache.Info.Text = string.format("[%sm] | [%s]", tostring(distance), tostring(weaponName))
+                    cache.Info.Size, cache.Info.Center, cache.Info.Outline, cache.Info.Color = 11, true, true, Color3.fromRGB(160, 160, 165)
+                    cache.Info.Position = Vector2.new(charPos.X, (charPos.Y + height/2) + 4)
+                    
                     cache.HealthBg.Visible = true
                     cache.HealthBg.Size = Vector2.new(3, height)
                     cache.HealthBg.Position = Vector2.new((charPos.X - width/2) - 6, charPos.Y - height/2)
-                    cache.HealthBg.Color = Color3.fromRGB(25, 25, 25)
-                    cache.HealthBg.Filled = true
+                    cache.HealthBg.Color, cache.HealthBg.Filled = Color3.fromRGB(25, 25, 25), true
                     
-                    -- Анимированная сине-черная полоска ХП
                     local healthRatio = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
                     cache.HealthBar.Visible = true
                     cache.HealthBar.Size = Vector2.new(3, height * healthRatio)
@@ -321,14 +333,8 @@ RunService.RenderStepped:Connect(function()
                     
                     local wave = (math.sin(tick() * 4) + 1) / 2
                     cache.HealthBar.Color = Color3.fromRGB(0, 100, 255):Lerp(Color3.fromRGB(15, 15, 15), wave * (1 - healthRatio * 0.5))
-                else
-                    removeDrawingESP(p)
-                end
-            else
-                removeDrawingESP(p)
-            end
-        else
-            removeDrawingESP(p)
-        end
+                else removeDrawingESP(p) end
+            else removeDrawingESP(p) end
+        else removeDrawingESP(p) end
     end
 end)
