@@ -1,0 +1,287 @@
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local Lighting = game:GetService("Lighting")
+
+local AimbotEnabled = false
+local TriggerbotEnabled = false
+local ESPEnabled = false
+local SMOOTHNESS = 3
+local FOV_RADIUS = 120
+local TARGET_PART = "Head"
+local AIM_KEY = Enum.UserInputType.MouseButton2
+local TOGGLE_KEY = Enum.KeyCode.Insert
+local Holding = false
+local MenuVisible = true
+local TweensActive = false
+
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Thickness = 1.5
+FOVCircle.Color = Color3.fromRGB(0, 210, 255)
+FOVCircle.Filled = false
+FOVCircle.Visible = false
+FOVCircle.Transparency = 0.5
+
+local TargetParent = game:GetService("CoreGui"):FindFirstChild("RobloxGui") 
+    or game:GetService("CoreGui") 
+    or LocalPlayer:WaitForChild("PlayerGui")
+
+if TargetParent:FindFirstChild("RivalsUltimateMenu") then 
+    TargetParent.RivalsUltimateMenu:Destroy() 
+end
+
+local MenuBlur = Lighting:FindFirstChild("MenuBlur") or Instance.new("BlurEffect", Lighting)
+MenuBlur.Name, MenuBlur.Size, MenuBlur.Enabled = "MenuBlur", 0, true
+
+local ScreenGui = Instance.new("ScreenGui", TargetParent)
+ScreenGui.Name, ScreenGui.ResetOnSpawn = "RivalsUltimateMenu", false
+
+local MainPanel = Instance.new("Frame", ScreenGui)
+MainPanel.Size = UDim2.new(0, 260, 0, 350)
+MainPanel.Position = UDim2.new(0.5, -130, 0.5, 300)
+MainPanel.BackgroundColor3 = Color3.fromRGB(11, 12, 15)
+MainPanel.BackgroundTransparency = 1
+MainPanel.BorderSizePixel = 0
+MainPanel.Active, MainPanel.Draggable = true, true
+Instance.new("UICorner", MainPanel).CornerRadius = UDim.new(0, 14)
+
+local UIStroke = Instance.new("UIStroke", MainPanel)
+UIStroke.Thickness, UIStroke.Transparency = 1.5, 1
+local Grad = Instance.new("UIGradient", UIStroke)
+Grad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 210, 255)), 
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(140, 0, 255))
+})
+local Header = Instance.new("Frame", MainPanel)
+Header.Size = UDim2.new(1, 0, 0, 48)
+Header.BackgroundColor3 = Color3.fromRGB(18, 19, 24)
+Header.BackgroundTransparency = 1
+Header.BorderSizePixel = 0
+Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 14)
+
+local HeaderFix = Instance.new("Frame", Header)
+HeaderFix.Size = UDim2.new(1, 0, 0, 10)
+HeaderFix.Position = UDim2.new(0, 0, 1, -10)
+HeaderFix.BackgroundColor3 = Color3.fromRGB(18, 19, 24)
+HeaderFix.BackgroundTransparency = 1
+HeaderFix.BorderSizePixel = 0
+
+local Title = Instance.new("TextLabel", Header)
+Title.Size = UDim2.new(1, 0, 1, 0)
+Title.Text = "RIVALS X PREMIUM"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextTransparency = 1
+Title.BackgroundTransparency = 1
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 13
+
+local Canvas = Instance.new("Frame", MainPanel)
+Canvas.Size = UDim2.new(1, 0, 1, -48)
+Canvas.Position = UDim2.new(0, 0, 0, 48)
+Canvas.BackgroundTransparency = 1
+
+local function createModernBtn(text, pos, isToggle)
+    local btn = Instance.new("TextButton", Canvas)
+    btn.Size = UDim2.new(0, 230, 0, 42)
+    btn.Position = UDim2.new(0.5, -115, 0, pos)
+    btn.Text = isToggle and "  "..text or text
+    btn.BackgroundColor3 = Color3.fromRGB(22, 24, 30)
+    btn.BackgroundTransparency = 1
+    btn.TextColor3 = Color3.fromRGB(170, 175, 190)
+    btn.TextTransparency = 1
+    btn.Font = Enum.Font.GothamSemibold
+    btn.TextSize = 13
+    btn.TextXAlignment = isToggle and Enum.TextXAlignment.Left or Enum.TextXAlignment.Center
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+    
+    local s = Instance.new("UIStroke", btn)
+    s.Thickness, s.Color, s.Transparency = 1, Color3.fromRGB(35, 38, 48), 1
+    
+    local ind = nil
+    if isToggle then
+        ind = Instance.new("Frame", btn)
+        ind.Size = UDim2.new(0, 8, 0, 8)
+        ind.Position = UDim2.new(1, -22, 0.5, -4)
+        ind.BackgroundColor3 = Color3.fromRGB(255, 65, 65)
+        ind.BackgroundTransparency = 1
+        Instance.new("UICorner", ind).CornerRadius = UDim.new(1, 0)
+    end
+    return btn, ind
+end
+
+local AimBtn, AimInd = createModernBtn("AIMBOT", 15, true)
+local TriggerBtn, TriggerInd = createModernBtn("TRIGGERBOT", 65, true)
+local EspBtn, EspInd = createModernBtn("WALLHACK / ESP", 115, true)
+local SmoothBtn = createModernBtn("SMOOTHNESS: " .. SMOOTHNESS, 165, false)
+
+local FooterHint = Instance.new("TextLabel", Canvas)
+FooterHint.Size = UDim2.new(1, 0, 0, 20)
+FooterHint.Position = UDim2.new(0, 0, 1, -25)
+FooterHint.Text = "Нажмите [INSERT] чтобы скрыть"
+FooterHint.TextColor3 = Color3.fromRGB(90, 95, 110)
+FooterHint.TextTransparency = 1
+FooterHint.BackgroundTransparency = 1
+FooterHint.Font = Enum.Font.Gotham
+FooterHint.TextSize = 11
+
+local function animateMenu(show)
+    TweensActive = true
+    local ease = TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+    if show then MainPanel.Visible = true end
+    
+    TweenService:Create(MainPanel, ease, {
+        Position = show and UDim2.new(0.5, -130, 0.5, -175) or UDim2.new(0.5, -130, 0.5, 350), 
+        BackgroundTransparency = show and 0.05 or 1
+    }):Play()
+    
+    TweenService:Create(Header, ease, {BackgroundTransparency = show and 0 or 1}):Play()
+    TweenService:Create(HeaderFix, ease, {BackgroundTransparency = show and 0 or 1}):Play()
+    TweenService:Create(UIStroke, ease, {Transparency = show and 0 or 1}):Play()
+    TweenService:Create(Title, ease, {TextTransparency = show and 0 or 1}):Play()
+    TweenService:Create(FooterHint, ease, {TextTransparency = show and 0 or 1}):Play()
+    TweenService:Create(MenuBlur, ease, {Size = show and 12 or 0}):Play()
+    
+    for _, b in pairs({AimBtn, TriggerBtn, EspBtn, SmoothBtn}) do
+        TweenService:Create(b, ease, {BackgroundTransparency = show and 0 or 1, TextTransparency = show and 0 or 1}):Play()
+        if b:FindFirstChild("UIStroke") then TweenService:Create(b.UIStroke, ease, {Transparency = show and 0 or 1}):Play() end
+        local i = b:FindFirstChild("Frame")
+        if i then TweenService:Create(i, ease, {BackgroundTransparency = show and 0 or 1}):Play() end
+    end
+    task.wait(0.5)
+    if not show then MainPanel.Visible = false end
+    TweensActive = false
+end
+
+task.spawn(function() animateMenu(true) end)
+
+UserInputService.InputBegan:Connect(function(i, p)
+    if not p and i.KeyCode == TOGGLE_KEY and not TweensActive then 
+        MenuVisible = not MenuVisible 
+        animateMenu(MenuVisible) 
+    end
+end)
+AimBtn.MouseButton1Click:Connect(function()
+    if TweensActive or MainPanel.BackgroundTransparency > 0.5 then return end
+    AimbotEnabled = not AimbotEnabled
+    FOVCircle.Visible = AimbotEnabled
+    TweenService:Create(AimInd, TweenInfo.new(0.2), {
+        BackgroundColor3 = AimbotEnabled and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(255, 65, 65)
+    }):Play()
+end)
+
+TriggerBtn.MouseButton1Click:Connect(function()
+    if TweensActive or MainPanel.BackgroundTransparency > 0.5 then return end
+    TriggerbotEnabled = not TriggerbotEnabled
+    TweenService:Create(TriggerInd, TweenInfo.new(0.2), {
+        BackgroundColor3 = TriggerbotEnabled and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(255, 65, 65)
+    }):Play()
+end)
+
+EspBtn.MouseButton1Click:Connect(function()
+    if TweensActive or MainPanel.BackgroundTransparency > 0.5 then return end
+    ESPEnabled = not ESPEnabled
+    TweenService:Create(EspInd, TweenInfo.new(0.2), {
+        BackgroundColor3 = ESPEnabled and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(255, 65, 65)
+    }):Play()
+    if not ESPEnabled then
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p.Character and p.Character:FindFirstChild("VHEffect") then p.Character.VHEffect:Destroy() end
+        end
+    end
+end)
+
+SmoothBtn.MouseButton1Click:Connect(function()
+    if TweensActive or MainPanel.BackgroundTransparency > 0.5 then return end
+    SMOOTHNESS = SMOOTHNESS >= 5 and 1 or SMOOTHNESS + 1
+    SmoothBtn.Text = "SMOOTHNESS: " .. SMOOTHNESS
+end)
+
+local function getClosestPlayer()
+    if not AimbotEnabled and not TriggerbotEnabled then return nil end
+    local closest, shortDist = nil, FOV_RADIUS
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and (p.Team ~= LocalPlayer.Team or not p.Team) then
+            local hum = p.Character:FindFirstChildOfClass("Humanoid")
+            if hum and hum.Health > 0 and p.Character:FindFirstChild(TARGET_PART) then
+                local pos, onScreen = Camera:WorldToViewportPoint(p.Character[TARGET_PART].Position)
+                if onScreen then
+                    local dist = (Vector2.new(pos.X, pos.Y) - UserInputService:GetMouseLocation()).Magnitude
+                    if dist < shortDist then shortDist, closest = dist, p end
+                end
+            end
+        end
+    end
+    return closest
+end
+
+UserInputService.InputBegan:Connect(function(i, p) if not p and i.UserInputType == AIM_KEY then Holding = true end end)
+UserInputService.InputEnded:Connect(function(i) if i.UserInputType == AIM_KEY then Holding = false end end)
+
+RunService.RenderStepped:Connect(function()
+    if FOVCircle.Visible then FOVCircle.Position = UserInputService:GetMouseLocation() end
+    if AimbotEnabled and Holding then
+        local t = getClosestPlayer()
+        if t and t.Character and t.Character:FindFirstChild(TARGET_PART) then
+            local pos, onScreen = Camera:WorldToViewportPoint(t.Character[TARGET_PART].Position)
+            if onScreen and mousemoverel then
+                local mPos = UserInputService:GetMouseLocation()
+                local moveX = (pos.X - mPos.X) / SMOOTHNESS
+                local moveY = (pos.Y - mPos.Y) / SMOOTHNESS
+                mousemoverel(moveX, moveY)
+            end
+        end
+    end
+end)
+
+task.spawn(function()
+    while true do
+        task.wait()
+        if TriggerbotEnabled then
+            local mouseTarget = LocalPlayer:GetMouse().Target
+            if mouseTarget and mouseTarget.Parent then
+                local obj = mouseTarget.Parent
+                local model = obj:IsA("Model") and obj or obj.Parent:IsA("Model") and obj.Parent
+                if model and model:FindFirstChildOfClass("Humanoid") then
+                    local player = Players:GetPlayerFromCharacter(model)
+                    if player and player ~= LocalPlayer and (player.Team ~= LocalPlayer.Team or not player.Team) then
+                        local humanoid = model:FindFirstChildOfClass("Humanoid")
+                        if humanoid and humanoid.Health > 0 then
+                            if mouse1click then
+                                mouse1click()
+                                task.wait(0.05)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(0.4) do
+        if ESPEnabled then
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer and p.Character and (p.Team ~= LocalPlayer.Team or not p.Team) then
+                    local hum = p.Character:FindFirstChildOfClass("Humanoid")
+                    if hum and hum.Health > 0 then
+                        local hl = p.Character:FindFirstChild("VHEffect") or Instance.new("Highlight")
+                        hl.Name = "VHEffect"
+                        hl.FillColor = Color3.fromRGB(0, 210, 255)
+                        hl.FillTransparency = 0.6
+                        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                        hl.OutlineTransparency = 0.2
+                        hl.Parent = p.Character
+                    else
+                        if p.Character:FindFirstChild("VHEffect") then p.Character.VHEffect:Destroy() end
+                    end
+                elseif p.Character and p.Character:FindFirstChild("VHEffect") then
+                    p.Character.VHEffect:Destroy()
+                end
+            end
+        end
+    end
+end)
