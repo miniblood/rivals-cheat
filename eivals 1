@@ -12,7 +12,7 @@ local ESPEnabled = false
 local SMOOTHNESS = 3
 local FOV_RADIUS = 120
 local TARGET_PART = "Head"
-local AIM_KEY = Enum.UserInputType.MouseButton2
+local AIM_KEY = Enum.KeyCode.E -- АИМ ТЕПЕРЬ НА КЛАВИШУ Е
 local TOGGLE_KEY = Enum.KeyCode.Insert
 local Holding = false
 local MenuVisible = true
@@ -112,7 +112,7 @@ local function createModernBtn(text, pos, isToggle)
     return btn, ind
 end
 
-local AimBtn, AimInd = createModernBtn("AIMBOT", 15, true)
+local AimBtn, AimInd = createModernBtn("AIMBOT (KEY: E)", 15, true)
 local TriggerBtn, TriggerInd = createModernBtn("TRIGGERBOT", 65, true)
 local EspBtn, EspInd = createModernBtn("WALLHACK / ESP", 115, true)
 local SmoothBtn = createModernBtn("SMOOTHNESS: " .. SMOOTHNESS, 165, false)
@@ -217,8 +217,8 @@ local function getClosestPlayer()
     return closest
 end
 
-UserInputService.InputBegan:Connect(function(i, p) if not p and i.UserInputType == AIM_KEY then Holding = true end end)
-UserInputService.InputEnded:Connect(function(i) if i.UserInputType == AIM_KEY then Holding = false end end)
+UserInputService.InputBegan:Connect(function(i, p) if not p and i.KeyCode == AIM_KEY then Holding = true end end)
+UserInputService.InputEnded:Connect(function(i) if i.KeyCode == AIM_KEY then Holding = false end end)
 
 RunService.RenderStepped:Connect(function()
     if FOVCircle.Visible then FOVCircle.Position = UserInputService:GetMouseLocation() end
