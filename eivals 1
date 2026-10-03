@@ -5,7 +5,6 @@ _G.BloodHack.AimbotEnabled = false
 _G.BloodHack.TriggerbotEnabled = false
 _G.BloodHack.ESPEnabled = false
 
--- Новые тумблеры для раздельного управления
 _G.BloodHack.TracersEnabled = true
 _G.BloodHack.HealthEnabled = true
 _G.BloodHack.DistanceEnabled = true
@@ -31,7 +30,7 @@ _G.BloodHack.ColorNames = {
     "Red", "Purple", "Green", "Cyan", "White"
 }
 _G.BloodHack.CurrentColorIndex = 1
-_G.BloodHack.ESP_Color = _G.BloodHack.ColorsList[1] -- Базовый красный
+_G.BloodHack.ESP_Color = Color3.fromRGB(255, 50, 50)
 
 local circle = Drawing.new("Circle")
 circle.Thickness = 1.5
@@ -112,7 +111,7 @@ _G.BloodHack.createSwitch("Show Wallhack ESP+", 0,
     end
 end)
 
--- ДОБАВЛЕНЫ НОВЫЕ ТУМБЛЕРЫ НАСТРОЙКИ ВИЗУАЛОВ ESP
+-- ИСПРАВЛЕНО: Теперь глобальные переменные перезаписываются напрямую
 _G.BloodHack.createSwitch("Show Tracers (Линии)", 46, 
     _G.BloodHack.TracersEnabled, _G.BloodHack.VisualFrame, function(v)
     _G.BloodHack.TracersEnabled = v
@@ -236,14 +235,12 @@ RS.RenderStepped:Connect(function()
                         local bx, by = vec.X - sx / 2, vec.Y - sy / 2
                         local clr = _G.BloodHack.ESP_Color
 
-                        -- 1. Квадрат врага
                         c.Box.Size = Vector2.new(sx, sy)
                         c.Box.Position = Vector2.new(bx, by)
                         c.Box.Color = clr
                         c.Box.Thickness = 1.5
                         c.Box.Visible = true
 
-                        -- 2. Никнейм
                         c.Name.Text = p.Name
                         c.Name.Size = 14
                         c.Name.Position = Vector2.new(vec.X - c.Name.TextBounds.X / 2, by - 16)
@@ -251,7 +248,6 @@ RS.RenderStepped:Connect(function()
                         c.Name.Outline = true
                         c.Name.Visible = true
 
-                        -- 3. Трейсеры (С возможностью отключения)
                         if _G.BloodHack.TracersEnabled then
                             c.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
                             c.Tracer.To = Vector2.new(vec.X, vec.Y + (sy / 2))
@@ -262,7 +258,6 @@ RS.RenderStepped:Connect(function()
                             c.Tracer.Visible = false
                         end
 
-                        -- 4. Полоска ХП (С возможностью отключения)
                         if _G.BloodHack.HealthEnabled then
                             local hpPct = hum.Health / hum.MaxHealth
                             local hBarY = sy * hpPct
@@ -275,7 +270,6 @@ RS.RenderStepped:Connect(function()
                             c.HealthBar.Visible = false
                         end
 
-                        -- 5. Текст дистанции (С возможностью отключения)
                         if _G.BloodHack.DistanceEnabled then
                             local myHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
                             local dMeters = myHrp and math.floor((hrp.Position - myHrp.Position).Magnitude) or 0
