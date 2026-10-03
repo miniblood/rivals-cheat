@@ -4,6 +4,12 @@ _G.BloodHack = _G.BloodHack or {}
 _G.BloodHack.AimbotEnabled = false
 _G.BloodHack.TriggerbotEnabled = false
 _G.BloodHack.ESPEnabled = false
+
+-- Новые тумблеры для раздельного управления
+_G.BloodHack.TracersEnabled = true
+_G.BloodHack.HealthEnabled = true
+_G.BloodHack.DistanceEnabled = true
+
 _G.BloodHack.SMOOTHNESS = 3
 _G.BloodHack.FOV_RADIUS = 120
 _G.BloodHack.TARGET_PART = "Head"
@@ -25,7 +31,7 @@ _G.BloodHack.ColorNames = {
     "Red", "Purple", "Green", "Cyan", "White"
 }
 _G.BloodHack.CurrentColorIndex = 1
-_G.BloodHack.ESP_Color = _G.BloodHack.ColorsList[1]
+_G.BloodHack.ESP_Color = _G.BloodHack.ColorsList[1] -- Базовый красный
 
 local circle = Drawing.new("Circle")
 circle.Thickness = 1.5
@@ -106,7 +112,23 @@ _G.BloodHack.createSwitch("Show Wallhack ESP+", 0,
     end
 end)
 
-local clr = _G.BloodHack.createMenuRow("ESP Custom Color", 46, _G.BloodHack.VisualFrame)
+-- ДОБАВЛЕНЫ НОВЫЕ ТУМБЛЕРЫ НАСТРОЙКИ ВИЗУАЛОВ ESP
+_G.BloodHack.createSwitch("Show Tracers (Линии)", 46, 
+    _G.BloodHack.TracersEnabled, _G.BloodHack.VisualFrame, function(v)
+    _G.BloodHack.TracersEnabled = v
+end)
+
+_G.BloodHack.createSwitch("Show Health Bar (ХП)", 92, 
+    _G.BloodHack.HealthEnabled, _G.BloodHack.VisualFrame, function(v)
+    _G.BloodHack.HealthEnabled = v
+end)
+
+_G.BloodHack.createSwitch("Show Distance (Дистанция)", 138, 
+    _G.BloodHack.DistanceEnabled, _G.BloodHack.VisualFrame, function(v)
+    _G.BloodHack.DistanceEnabled = v
+end)
+
+local clr = _G.BloodHack.createMenuRow("ESP Custom Color", 184, _G.BloodHack.VisualFrame)
 local clb = Instance.new("TextButton", clr)
 clb.Size = UDim2.new(0, 80, 0, 24)
 clb.Position = UDim2.new(1, -92, 0.5, -12)
@@ -132,45 +154,24 @@ _G.BloodHack.setMenuVisible = function(visible)
     _G.BloodHack.TweensActive = true
     local ti = TweenInfo.new(0.3, Enum.EasingStyle.Quart, 
         Enum.EasingDirection.Out)
-    
     if visible then
         _G.BloodHack.MainPanel.Visible = true
         TS:Create(_G.BloodHack.MainPanel, ti, {
             Size = UDim2.new(0, 300, 0, 360), 
             Position = UDim2.new(0.5, -150, 0.5, -180)
         }):Play()
-        local a = TS:Create(_G.BloodHack.CanvasGroup, ti, {
-            GroupTransparency = 0
-        })
+        local a = TS:Create(_G.BloodHack.CanvasGroup, ti, {GroupTransparency = 0})
         a:Play() a.Completed:Wait()
     else
         TS:Create(_G.BloodHack.MainPanel, ti, {
-            Size = UDim2.new(0, 0, 0, 0), 
-            Position = UDim2.new(0.5, 0, 0.5, 0)
+            Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0.5, 0)
         }):Play()
-        local a = TS:Create(_G.BloodHack.CanvasGroup, ti, {
-            GroupTransparency = 1
-        })
+        local a = TS:Create(_G.BloodHack.CanvasGroup, ti, {GroupTransparency = 1})
         a:Play() a.Completed:Wait()
         _G.BloodHack.MainPanel.Visible = false
     end
     _G.BloodHack.TweensActive = false
 end
-
-UIS.InputBegan:Connect(function(i, p)
-    if not p and i.KeyCode == _G.BloodHack.TOGGLE_KEY then
-        _G.BloodHack.MenuVisible = not _G.BloodHack.MenuVisible
-        _G.BloodHack.setMenuVisible(_G.BloodHack.MenuVisible)
-    elseif i.KeyCode == _G.BloodHack.AIM_KEY then
-        _G.BloodHack.Holding = true
-    end
-end)
-
-UIS.InputEnded:Connect(function(i)
-    if i.KeyCode == _G.BloodHack.AIM_KEY then
-        _G.BloodHack.Holding = false
-    end
-end)
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
@@ -187,15 +188,11 @@ RS.RenderStepped:Connect(function()
        and _G.BloodHack.getClosestPlayer then
         local t = _G.BloodHack.getClosestPlayer()
         if t and t.Character then
-            local part = t.Character:FindFirstChild(
-                _G.BloodHack.TARGET_PART
-            )
+            local part = t.Character:FindFirstChild(_G.BloodHack.TARGET_PART)
             if part then
-                local pos, onScreen = 
-                    Camera:WorldToViewportPoint(part.Position)
+                local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
                 if onScreen then
-                    local move = (Vector2.new(pos.X, pos.Y) 
-                                 - mouse) / _G.BloodHack.SMOOTHNESS
+                    local move = (Vector2.new(pos.X, pos.Y) - mouse) / _G.BloodHack.SMOOTHNESS
                     if mousemoverel then mousemoverel(move.X, move.Y) end
                 end
             end
@@ -209,8 +206,7 @@ RS.RenderStepped:Connect(function()
             local model = res.Instance:FindFirstAncestorOfClass("Model")
             if model then
                 local p = Players:GetPlayerFromCharacter(model)
-                if p and p ~= LocalPlayer and (p.Team ~= LocalPlayer.Team 
-                   or p.Team == nil) then
+                if p and p ~= LocalPlayer and (p.Team ~= LocalPlayer.Team or p.Team == nil) then
                     if mouse1click then mouse1click() task.wait(0.07) end
                 end
             end
@@ -222,15 +218,12 @@ RS.RenderStepped:Connect(function()
             if p ~= LocalPlayer and p.Character then
                 local hrp = p.Character:FindFirstChild("HumanoidRootPart")
                 local hum = p.Character:FindFirstChildOfClass("Humanoid")
-                if hrp and hum and hum.Health > 0 and 
-                   (p.Team ~= LocalPlayer.Team or p.Team == nil) then
+                if hrp and hum and hum.Health > 0 and (p.Team ~= LocalPlayer.Team or p.Team == nil) then
                     
                     if not _G.BloodHack.ESP_Cache[p] then
                         _G.BloodHack.ESP_Cache[p] = {
-                            Box = Drawing.new("Square"),
-                            Name = Drawing.new("Text"),
-                            Tracer = Drawing.new("Line"),
-                            HealthBar = Drawing.new("Line"),
+                            Box = Drawing.new("Square"), Name = Drawing.new("Text"),
+                            Tracer = Drawing.new("Line"), HealthBar = Drawing.new("Line"),
                             Dist = Drawing.new("Text")
                         }
                     end
@@ -243,42 +236,58 @@ RS.RenderStepped:Connect(function()
                         local bx, by = vec.X - sx / 2, vec.Y - sy / 2
                         local clr = _G.BloodHack.ESP_Color
 
+                        -- 1. Квадрат врага
                         c.Box.Size = Vector2.new(sx, sy)
                         c.Box.Position = Vector2.new(bx, by)
                         c.Box.Color = clr
                         c.Box.Thickness = 1.5
                         c.Box.Visible = true
 
+                        -- 2. Никнейм
                         c.Name.Text = p.Name
                         c.Name.Size = 14
-                        c.Name.Position = Vector2.new(vec.X - 
-                            c.Name.TextBounds.X / 2, by - 16)
+                        c.Name.Position = Vector2.new(vec.X - c.Name.TextBounds.X / 2, by - 16)
                         c.Name.Color = Color3.fromRGB(255, 255, 255)
                         c.Name.Outline = true
                         c.Name.Visible = true
 
-                        c.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
-                        c.Tracer.To = Vector2.new(vec.X, vec.Y + (sy / 2))
-                        c.Tracer.Color = clr
-                        c.Tracer.Thickness = 1
-                        c.Tracer.Visible = true
+                        -- 3. Трейсеры (С возможностью отключения)
+                        if _G.BloodHack.TracersEnabled then
+                            c.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                            c.Tracer.To = Vector2.new(vec.X, vec.Y + (sy / 2))
+                            c.Tracer.Color = clr
+                            c.Tracer.Thickness = 1
+                            c.Tracer.Visible = true
+                        else
+                            c.Tracer.Visible = false
+                        end
 
-                        local hpPct = hum.Health / hum.MaxHealth
-                        local hBarY = sy * hpPct
-                        c.HealthBar.From = Vector2.new(bx - 5, by + sy)
-                        c.HealthBar.To = Vector2.new(bx - 5, (by + sy) - hBarY)
-                        c.HealthBar.Color = Color3.fromHSV(hpPct * 0.33, 1, 1)
-                        c.HealthBar.Thickness = 2.5
-                        c.HealthBar.Visible = true
+                        -- 4. Полоска ХП (С возможностью отключения)
+                        if _G.BloodHack.HealthEnabled then
+                            local hpPct = hum.Health / hum.MaxHealth
+                            local hBarY = sy * hpPct
+                            c.HealthBar.From = Vector2.new(bx - 5, by + sy)
+                            c.HealthBar.To = Vector2.new(bx - 5, (by + sy) - hBarY)
+                            c.HealthBar.Color = Color3.fromHSV(hpPct * 0.33, 1, 1)
+                            c.HealthBar.Thickness = 2.5
+                            c.HealthBar.Visible = true
+                        else
+                            c.HealthBar.Visible = false
+                        end
 
-                        local myHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                        local dMeters = myHrp and math.floor((hrp.Position - myHrp.Position).Magnitude) or 0
-                        c.Dist.Text = "[" .. tostring(dMeters) .. "m]"
-                        c.Dist.Size = 13
-                        c.Dist.Position = Vector2.new(vec.X - c.Dist.TextBounds.X / 2, by + sy + 4)
-                        c.Dist.Color = clr
-                        c.Dist.Outline = true
-                        c.Dist.Visible = true
+                        -- 5. Текст дистанции (С возможностью отключения)
+                        if _G.BloodHack.DistanceEnabled then
+                            local myHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                            local dMeters = myHrp and math.floor((hrp.Position - myHrp.Position).Magnitude) or 0
+                            c.Dist.Text = "[" .. tostring(dMeters) .. "m]"
+                            c.Dist.Size = 13
+                            c.Dist.Position = Vector2.new(vec.X - c.Dist.TextBounds.X / 2, by + sy + 4)
+                            c.Dist.Color = clr
+                            c.Dist.Outline = true
+                            c.Dist.Visible = true
+                        else
+                            c.Dist.Visible = false
+                        end
                     else
                         c.Box.Visible = false c.Name.Visible = false
                         c.Tracer.Visible = false c.HealthBar.Visible = false
