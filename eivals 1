@@ -10,168 +10,180 @@ local AimbotEnabled, TriggerbotEnabled, ESPEnabled = false, false, false
 local SMOOTHNESS, FOV_RADIUS, TARGET_PART = 3, 120, "Head"
 local AIM_KEY, TOGGLE_KEY = Enum.KeyCode.E, Enum.KeyCode.Insert
 local Holding, MenuVisible, TweensActive = false, true, false
+local CurrentTab = "Main"
 
 local FOVCircle = Drawing.new("Circle")
-FOVCircle.Thickness = 1.5
-FOVCircle.Color = Color3.fromRGB(200, 200, 200)
-FOVCircle.Filled = false
-FOVCircle.Visible = false
-FOVCircle.Transparency = 0.5
+FOVCircle.Thickness, FOVCircle.Color, FOVCircle.Filled, FOVCircle.Visible, FOVCircle.Transparency = 1.5, Color3.fromRGB(110, 60, 255), false, false, 0.5
 
-local TargetParent = game:GetService("CoreGui"):FindFirstChild("RobloxGui") 
-    or game:GetService("CoreGui") 
-    or LocalPlayer:WaitForChild("PlayerGui")
-
-if TargetParent:FindFirstChild("RivalsUltimateMenu") then 
-    TargetParent.RivalsUltimateMenu:Destroy() 
-end
-
-local MenuBlur = Lighting:FindFirstChild("MenuBlur") or Instance.new("BlurEffect", Lighting)
-MenuBlur.Name, MenuBlur.Size, MenuBlur.Enabled = "MenuBlur", 0, true
+local TargetParent = game:GetService("CoreGui"):FindFirstChild("RobloxGui") or game:GetService("CoreGui") or LocalPlayer:WaitForChild("PlayerGui")
+if TargetParent:FindFirstChild("NullZenRivals") then TargetParent.NullZenRivals:Destroy() end
 
 local ScreenGui = Instance.new("ScreenGui", TargetParent)
-ScreenGui.Name, ScreenGui.ResetOnSpawn = "RivalsUltimateMenu", false
+ScreenGui.Name, ScreenGui.ResetOnSpawn = "NullZenRivals", false
 
 local MainPanel = Instance.new("Frame", ScreenGui)
-MainPanel.Size = UDim2.new(0, 260, 0, 350)
-MainPanel.Position = UDim2.new(0.5, -130, 0.5, 300)
-MainPanel.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
-MainPanel.BackgroundTransparency = 1
+MainPanel.Size = UDim2.new(0, 300, 0, 360)
+MainPanel.Position = UDim2.new(0.5, -150, 0.5, -180)
+MainPanel.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
 MainPanel.BorderSizePixel = 0
 MainPanel.Active, MainPanel.Draggable = true, true
-Instance.new("UICorner", MainPanel).CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", MainPanel).CornerRadius = UDim.new(0, 8)
 
 local UIStroke = Instance.new("UIStroke", MainPanel)
-UIStroke.Thickness = 1.5
-UIStroke.Color = Color3.fromRGB(45, 45, 48)
-UIStroke.Transparency = 1
-local Header = Instance.new("Frame", MainPanel)
-Header.Size = UDim2.new(1, 0, 0, 48)
-Header.BackgroundColor3 = Color3.fromRGB(28, 28, 30)
-Header.BackgroundTransparency = 1
-Header.BorderSizePixel = 0
-Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 10)
+UIStroke.Thickness, UIStroke.Color = 1, Color3.fromRGB(30, 30, 35)
 
-local HeaderFix = Instance.new("Frame", Header)
-HeaderFix.Size = UDim2.new(1, 0, 0, 10)
-HeaderFix.Position = UDim2.new(0, 0, 1, -10)
-HeaderFix.BackgroundColor3 = Color3.fromRGB(28, 28, 30)
-HeaderFix.BackgroundTransparency = 1
-HeaderFix.BorderSizePixel = 0
+local TopHeader = Instance.new("Frame", MainPanel)
+TopHeader.Size = UDim2.new(1, 0, 0, 35)
+TopHeader.BackgroundTransparency = 1
 
-local Title = Instance.new("TextLabel", Header)
-Title.Size = UDim2.new(1, 0, 1, 0)
-Title.Text = "RIVALS PREMIUM"
-Title.TextColor3 = Color3.fromRGB(240, 240, 240)
-Title.TextTransparency = 1
-Title.BackgroundTransparency = 1
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 13
+local Title = Instance.new("TextLabel", TopHeader)
+Title.Size = UDim2.new(0, 200, 1, 0)
+Title.Position = UDim2.new(0, 12, 0, 0)
+Title.Text = "NullZen || Rivals || v1.0.0"
+Title.TextColor3 = Color3.fromRGB(200, 200, 200)
+Title.Font = Enum.Font.GothamSemibold
+Title.TextSize = 12
+Title.TextXAlignment = Enum.TextXAlignment.Left
 
-local Canvas = Instance.new("Frame", MainPanel)
-Canvas.Size = UDim2.new(1, 0, 1, -48)
-Canvas.Position = UDim2.new(0, 0, 0, 48)
-Canvas.BackgroundTransparency = 1
+local TabContainer = Instance.new("Frame", MainPanel)
+TabContainer.Size = UDim2.new(1, -24, 0, 30)
+TabContainer.Position = UDim2.new(0, 12, 0, 35)
+TabContainer.BackgroundTransparency = 1
 
-local function createModernBtn(text, pos, isToggle)
-    local btn = Instance.new("TextButton", Canvas)
-    btn.Size = UDim2.new(0, 230, 0, 42)
-    btn.Position = UDim2.new(0.5, -115, 0, pos)
-    btn.Text = isToggle and "  "..text or text
-    btn.BackgroundColor3 = Color3.fromRGB(28, 28, 30)
-    btn.BackgroundTransparency = 1
-    btn.TextColor3 = Color3.fromRGB(200, 200, 200)
-    btn.TextTransparency = 1
-    btn.Font = Enum.Font.GothamSemibold
-    btn.TextSize = 13
-    btn.TextXAlignment = isToggle and Enum.TextXAlignment.Left or Enum.TextXAlignment.Center
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+local MainTab = Instance.new("TextButton", TabContainer)
+MainTab.Size = UDim2.new(0, 65, 1, 0)
+MainTab.BackgroundColor3 = Color3.fromRGB(110, 60, 255)
+MainTab.Text = "Main"
+MainTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+MainTab.Font = Enum.Font.GothamBold
+MainTab.TextSize = 11
+Instance.new("UICorner", MainTab).CornerRadius = UDim.new(0, 6)
+
+local VisualTab = Instance.new("TextButton", TabContainer)
+VisualTab.Size = UDim2.new(0, 65, 1, 0)
+VisualTab.Position = UDim2.new(0, 72, 0, 0)
+VisualTab.BackgroundColor3 = Color3.fromRGB(25, 25, 28)
+VisualTab.Text = "Visual"
+VisualTab.TextColor3 = Color3.fromRGB(160, 160, 165)
+VisualTab.Font = Enum.Font.GothamBold
+VisualTab.TextSize = 11
+Instance.new("UICorner", VisualTab).CornerRadius = UDim.new(0, 6)
+Instance.new("UIStroke", VisualTab).Color = Color3.fromRGB(40, 40, 45)
+
+local Container = Instance.new("Frame", MainPanel)
+Container.Size = UDim2.new(1, -24, 1, -85)
+Container.Position = UDim2.new(0, 12, 0, 75)
+Container.BackgroundTransparency = 1
+local function createMenuRow(name, heightPos, parentFrame)
+    local row = Instance.new("Frame", parentFrame)
+    row.Size = UDim2.new(1, 0, 0, 40)
+    row.Position = UDim2.new(0, 0, 0, heightPos)
+    row.BackgroundColor3 = Color3.fromRGB(22, 22, 26)
+    row.BorderSizePixel = 0
+    Instance.new("UICorner", row).CornerRadius = UDim.new(0, 6)
+    local s = Instance.new("UIStroke", row) s.Color = Color3.fromRGB(32, 32, 38)
     
-    local s = Instance.new("UIStroke", btn)
-    s.Thickness = 1
-    s.Color = Color3.fromRGB(45, 45, 48)
-    s.Transparency = 1
-    
-    local ind = nil
-    if isToggle then
-        ind = Instance.new("Frame", btn)
-        ind.Size = UDim2.new(0, 8, 0, 8)
-        ind.Position = UDim2.new(1, -22, 0.5, -4)
-        ind.BackgroundColor3 = Color3.fromRGB(120, 120, 125)
-        ind.BackgroundTransparency = 1
-        Instance.new("UICorner", ind).CornerRadius = UDim.new(1, 0)
-    end
-    return btn, ind
+    local lbl = Instance.new("TextLabel", row)
+    lbl.Size = UDim2.new(0, 150, 1, 0)
+    lbl.Position = UDim2.new(0, 12, 0, 0)
+    lbl.Text = name
+    lbl.TextColor3 = Color3.fromRGB(180, 180, 185)
+    lbl.Font = Enum.Font.GothamSemibold
+    lbl.TextSize = 11
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.BackgroundTransparency = 1
+    return row
 end
 
-local AimBtn, AimInd = createModernBtn("AIMBOT (KEY: E)", 15, true)
-local TriggerBtn, TriggerInd = createModernBtn("TRIGGERBOT", 65, true)
-local EspBtn, EspInd = createModernBtn("WALLHACK / ESP+", 115, true)
-local SmoothBtn = createModernBtn("SMOOTHNESS: " .. SMOOTHNESS, 165, false)
-
-local FooterHint = Instance.new("TextLabel", Canvas)
-FooterHint.Size = UDim2.new(1, 0, 0, 20)
-FooterHint.Position = UDim2.new(0, 0, 1, -25)
-FooterHint.Text = "Нажмите [INSERT] чтобы скрыть"
-FooterHint.TextColor3 = Color3.fromRGB(140, 140, 145)
-FooterHint.TextTransparency = 1
-FooterHint.BackgroundTransparency = 1
-FooterHint.Font = Enum.Font.Gotham
-FooterHint.TextSize = 11
-
-local function animateMenu(show)
-    TweensActive = true
-    local ease = TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-    if show then MainPanel.Visible = true end
+local function createSwitch(name, pos, default, parentFrame, callback)
+    local row = createMenuRow(name, pos, parentFrame)
+    local pwr = Instance.new("TextButton", row)
+    pwr.Size = UDim2.new(0, 36, 0, 18)
+    pwr.Position = UDim2.new(1, -48, 0.5, -9)
+    pwr.BackgroundColor3 = default and Color3.fromRGB(110, 60, 255) or Color3.fromRGB(45, 45, 50)
+    pwr.Text = ""
+    Instance.new("UICorner", pwr).CornerRadius = UDim.new(1, 0)
     
-    TweenService:Create(MainPanel, ease, {
-        Position = show and UDim2.new(0.5, -130, 0.5, -175) or UDim2.new(0.5, -130, 0.5, 350), 
-        BackgroundTransparency = show and 0 or 1
-    }):Play()
+    local dot = Instance.new("Frame", pwr)
+    dot.Size = UDim2.new(0, 12, 0, 12)
+    dot.Position = default and UDim2.new(1, -15, 0.5, -6) or UDim2.new(0, 3, 0.5, -6)
+    dot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
     
-    TweenService:Create(Header, ease, {BackgroundTransparency = show and 0 or 1}):Play()
-    TweenService:Create(HeaderFix, ease, {BackgroundTransparency = show and 0 or 1}):Play()
-    TweenService:Create(UIStroke, ease, {Transparency = show and 0 or 1}):Play()
-    TweenService:Create(Title, ease, {TextTransparency = show and 0 or 1}):Play()
-    TweenService:Create(FooterHint, ease, {TextTransparency = show and 0 or 1}):Play()
-    TweenService:Create(MenuBlur, ease, {Size = show and 8 or 0}):Play()
-    
-    for _, b in pairs({AimBtn, TriggerBtn, EspBtn, SmoothBtn}) do
-        TweenService:Create(b, ease, {BackgroundTransparency = show and 0 or 1, TextTransparency = show and 0 or 1}):Play()
-        if b:FindFirstChild("UIStroke") then TweenService:Create(b.UIStroke, ease, {Transparency = show and 0 or 1}):Play() end
-        local i = b:FindFirstChild("Frame")
-        if i then TweenService:Create(i, ease, {BackgroundTransparency = show and 0 or 1}):Play() end
-    end
-    task.wait(0.5)
-    if not show then MainPanel.Visible = false end
-    TweensActive = false
+    pwr.MouseButton1Click:Connect(function()
+        default = not default
+        TweenService:Create(pwr, TweenInfo.new(0.2), {BackgroundColor3 = default and Color3.fromRGB(110, 60, 255) or Color3.fromRGB(45, 45, 50)}):Play()
+        TweenService:Create(dot, TweenInfo.new(0.2), {Position = default and UDim2.new(1, -15, 0.5, -6) or UDim2.new(0, 3, 0.5, -6)}):Play()
+        callback(default)
+    end)
 end
 
-task.spawn(function() animateMenu(true) end)
+local MainFrame = Instance.new("Frame", Container)
+MainFrame.Size = UDim2.new(1, 0, 1, 0)
+MainFrame.BackgroundTransparency = 1
+
+local VisualFrame = Instance.new("Frame", Container)
+VisualFrame.Size = UDim2.new(1, 0, 1, 0)
+VisualFrame.BackgroundTransparency = 1
+VisualFrame.Visible = false
+
+local function switchTab(tab)
+    CurrentTab = tab
+    MainFrame.Visible = (tab == "Main")
+    VisualFrame.Visible = (tab == "Visual")
+    
+    TweenService:Create(MainTab, TweenInfo.new(0.2), {BackgroundColor3 = (tab == "Main") and Color3.fromRGB(110, 60, 255) or Color3.fromRGB(25, 25, 28), TextColor3 = (tab == "Main") and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(160, 160, 165)}):Play()
+    TweenService:Create(VisualTab, TweenInfo.new(0.2), {BackgroundColor3 = (tab == "Visual") and Color3.fromRGB(110, 60, 255) or Color3.fromRGB(25, 25, 28), TextColor3 = (tab == "Visual") and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(160, 160, 165)}):Play()
+end
+
+MainTab.MouseButton1Click:Connect(function() switchTab("Main") end)
+VisualTab.MouseButton1Click:Connect(function() switchTab("Visual") end)
+
+createSwitch("Silent Aim (Key: E)", 0, AimbotEnabled, MainFrame, function(v) AimbotEnabled = v FOVCircle.Visible = v end)
+createSwitch("Triggerbot", 46, TriggerbotEnabled, MainFrame, function(v) TriggerbotEnabled = v end)
+
+local SmoothRow = createMenuRow("Smoothness", 92, MainFrame)
+local SmoothBtn = Instance.new("TextButton", SmoothRow)
+SmoothBtn.Size = UDim2.new(0, 80, 0, 24)
+SmoothBtn.Position = UDim2.new(1, -92, 0.5, -12)
+SmoothBtn.BackgroundColor3 = Color3.fromRGB(110, 60, 255)
+SmoothBtn.Text = tostring(SMOOTHNESS)
+SmoothBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SmoothBtn.Font = Enum.Font.GothamBold
+SmoothBtn.TextSize = 11
+Instance.new("UICorner", SmoothBtn).CornerRadius = UDim.new(0, 4)
+SmoothBtn.MouseButton1Click:Connect(function()
+    SMOOTHNESS = SMOOTHNESS >= 5 and 1 or SMOOTHNESS + 1
+    SmoothBtn.Text = tostring(SMOOTHNESS)
+end)
+
+local BoneRow = createMenuRow("Target Body Part", 138, MainFrame)
+local BoneBtn = Instance.new("TextButton", BoneRow)
+BoneBtn.Size = UDim2.new(0, 80, 0, 24)
+BoneBtn.Position = UDim2.new(1, -92, 0.5, -12)
+BoneBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+BoneBtn.Text = TARGET_PART
+BoneBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+BoneBtn.Font = Enum.Font.GothamSemibold
+BoneBtn.TextSize = 10
+Instance.new("UICorner", BoneBtn).CornerRadius = UDim.new(0, 4)
+Instance.new("UIStroke", BoneBtn).Color = Color3.fromRGB(55, 55, 60)
+BoneBtn.MouseButton1Click:Connect(function()
+    TARGET_PART = (TARGET_PART == "Head") and "HumanoidRootPart" or "Head"
+    BoneBtn.Text = (TARGET_PART == "Head") and "Head" or "Chest"
+end)
+
+createSwitch("Show Wallhack ESP+", 0, ESPEnabled, VisualFrame, function(v)
+    ESPEnabled = v
+    if not v then for p, _ in pairs(ESP_Cache) do removeDrawingESP(p) end end
+end)
 
 UserInputService.InputBegan:Connect(function(i, p)
-    if not p and i.KeyCode == TOGGLE_KEY and not TweensActive then 
-        MenuVisible = not MenuVisible 
-        animateMenu(MenuVisible) 
+    if not p and i.KeyCode == TOGGLE_KEY then
+        MenuVisible = not MenuVisible
+        MainPanel.Visible = MenuVisible
     end
 end)
-AimBtn.MouseButton1Click:Connect(function()
-    if TweensActive or MainPanel.BackgroundTransparency > 0.5 then return end
-    AimbotEnabled = not AimbotEnabled
-    FOVCircle.Visible = AimbotEnabled
-    TweenService:Create(AimInd, TweenInfo.new(0.2), {
-        BackgroundColor3 = AimbotEnabled and Color3.fromRGB(240, 240, 240) or Color3.fromRGB(120, 120, 125)
-    }):Play()
-end)
-
-TriggerBtn.MouseButton1Click:Connect(function()
-    if TweensActive or MainPanel.BackgroundTransparency > 0.5 then return end
-    TriggerbotEnabled = not TriggerbotEnabled
-    TweenService:Create(TriggerInd, TweenInfo.new(0.2), {
-        BackgroundColor3 = TriggerbotEnabled and Color3.fromRGB(240, 240, 240) or Color3.fromRGB(120, 120, 125)
-    }):Play()
-end)
-
 local ESP_Cache = {}
 
 local function createDrawingESP(player)
@@ -185,33 +197,15 @@ local function createDrawingESP(player)
     }
 end
 
-local function removeDrawingESP(player)
+function removeDrawingESP(player)
     if ESP_Cache[player] then
         for _, obj in pairs(ESP_Cache[player]) do obj:Remove() end
         ESP_Cache[player] = nil
     end
 end
 
-EspBtn.MouseButton1Click:Connect(function()
-    if TweensActive or MainPanel.BackgroundTransparency > 0.5 then return end
-    ESPEnabled = not ESPEnabled
-    TweenService:Create(EspInd, TweenInfo.new(0.2), {
-        BackgroundColor3 = ESPEnabled and Color3.fromRGB(240, 240, 240) or Color3.fromRGB(120, 120, 125)
-    }):Play()
-    if not ESPEnabled then
-        for p, _ in pairs(ESP_Cache) do removeDrawingESP(p) end
-    end
-end)
-
 Players.PlayerRemoving:Connect(removeDrawingESP)
 
-SmoothBtn.MouseButton1Click:Connect(function()
-    if TweensActive or MainPanel.BackgroundTransparency > 0.5 then return end
-    SMOOTHNESS = SMOOTHNESS >= 5 and 1 or SMOOTHNESS + 1
-    SmoothBtn.Text = "SMOOTHNESS: " .. SMOOTHNESS
-end)
-
--- Умный поиск цели с Wall Check (Проверкой на видимость за стеной)
 local function getClosestPlayer()
     if not AimbotEnabled and not TriggerbotEnabled then return nil end
     local closest, shortDist = nil, FOV_RADIUS
@@ -222,16 +216,13 @@ local function getClosestPlayer()
                 local targetPart = p.Character[TARGET_PART]
                 local pos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
                 if onScreen then
-                    -- WALL CHECK: Проверяем, видит ли луч деталь врага без препятствий
                     local raycastParams = RaycastParams.new()
                     raycastParams.FilterType = Enum.RaycastFilterType.Exclude
                     raycastParams.FilterDescendantsInstances = {LocalPlayer.Character, Camera}
-                    
                     local origin = Camera.CFrame.Position
                     local direction = (targetPart.Position - origin).Unit * (targetPart.Position - origin).Magnitude
                     local result = workspace:Raycast(origin, direction, raycastParams)
                     
-                    -- Если луч ни обо что не ударился или попал в модельку этого же игрока -> враг виден!
                     if not result or result.Instance:IsDescendantOf(p.Character) then
                         local dist = (Vector2.new(pos.X, pos.Y) - UserInputService:GetMouseLocation()).Magnitude
                         if dist < shortDist then shortDist, closest = dist, p end
@@ -282,7 +273,6 @@ task.spawn(function()
     end
 end)
 
--- Рендеринг Drawing ESP (Ники + Дистанция + Оружие + Пульсирующее ХП)
 RunService.RenderStepped:Connect(function()
     if not ESPEnabled then return end
     for _, p in ipairs(Players:GetPlayers()) do
@@ -310,7 +300,6 @@ RunService.RenderStepped:Connect(function()
                     cache.Name.Size, cache.Name.Center, cache.Name.Outline, cache.Name.Color = 13, true, true, Color3.fromRGB(240, 240, 240)
                     cache.Name.Position = Vector2.new(charPos.X, (charPos.Y - height/2) - 16)
                     
-                    -- ДИНАМИЧЕСКИЙ ТЕКСТ ПОД НОГАМИ: Дистанция и Оружие в руках
                     local distance = math.floor((LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and (hrp.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude) or 0)
                     local tool = p.Character:FindFirstChildOfClass("Tool")
                     local weaponName = tool and tool.Name or "Hands"
