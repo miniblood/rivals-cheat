@@ -1,11 +1,4 @@
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
-
--- Создаем глобальную базу для всех трех частей
+local UIS = game:GetService("UserInputService")
 _G.BloodHack = _G.BloodHack or {}
 
 _G.BloodHack.AimbotEnabled = false
@@ -21,225 +14,407 @@ _G.BloodHack.MenuVisible = true
 _G.BloodHack.TweensActive = false
 _G.BloodHack.CurrentTab = "Main"
 
+local circle = Drawing.new("Circle")
+circle.Thickness = 1.5
+circle.Color = Color3.fromRGB(110, 60, 255)
+circle.Filled = false
+circle.Visible = false
+circle.Transparency = 0.5
+circle.Radius = _G.BloodHack.FOV_RADIUS
+_G.BloodHack.FOVCircle = circle
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local UIS = game:GetService("UserInputService")
+
+_G.BloodHack = _G.BloodHack or {}
 _G.BloodHack.ESP_Cache = {}
-_G.BloodHack.removeDrawingESP = function(player)
-    if _G.BloodHack.ESP_Cache[player] then
-        if _G.BloodHack.ESP_Cache[player].Box then _G.BloodHack.ESP_Cache[player].Box:Remove() end
-        if _G.BloodHack.ESP_Cache[player].Name then _G.BloodHack.ESP_Cache[player].Name:Remove() end
-        _G.BloodHack.ESP_Cache[player] = nil
+
+_G.BloodHack.removeDrawingESP = function(p)
+    local cache = _G.BloodHack.ESP_Cache[p]
+    if cache then
+        if cache.Box then cache.Box:Remove() end
+        if cache.Name then cache.Name:Remove() end
+        _G.BloodHack.ESP_Cache[p] = nil
     end
 end
 
-_G.BloodHack.FOVCircle = Drawing.new("Circle")
-_G.BloodHack.FOVCircle.Thickness = 1.5
-_G.BloodHack.FOVCircle.Color = Color3.fromRGB(110, 60, 255)
-_G.BloodHack.FOVCircle.Filled = false
-_G.BloodHack.FOVCircle.Visible = false
-_G.BloodHack.FOVCircle.Transparency = 0.5
-_G.BloodHack.FOVCircle.Radius = _G.BloodHack.FOV_RADIUS
-local TargetParent = game:GetService("CoreGui"):FindFirstChild("RobloxGui") or game:GetService("CoreGui") or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
-if TargetParent:FindFirstChild("BloodHackRivals") then TargetParent.BloodHackRivals:Destroy() end
+_G.BloodHack.getClosestPlayer = function()
+    local target = nil
+    local shortest = _G.BloodHack.FOV_RADIUS
+    local mouse = UIS:GetMouseLocation()
 
-_G.BloodHack.ScreenGui = Instance.new("ScreenGui", TargetParent)
-_G.BloodHack.ScreenGui.Name = "BloodHackRivals"
-_G.BloodHack.ScreenGui.ResetOnSpawn = false
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character then
+            local part = p.Character:FindFirstChild(
+                _G.BloodHack.TARGET_PART
+            )
+            local hum = p.Character:FindFirstChildOfClass(
+                "Humanoid"
+            )
+            if part and hum and hum.Health > 0 then
+                if p.Team == LocalPlayer.Team and 
+                   p.Team ~= nil then continue end
+                
+                local pos, onScreen = 
+                    Camera:WorldToViewportPoint(part.Position)
+                
+                if onScreen then
+                    local dist = (Vector2.new(pos.X, pos.Y) 
+                                 - mouse).Magnitude
+                    if dist < shortest then
+                        target = p
+                        shortest = dist
+                    end
+                end
+            end
+        end
+    end
+    return target
+end
+local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+local TargetParent = CoreGui:FindFirstChild("RobloxGui") 
+    or CoreGui or Players.LocalPlayer:WaitForChild("PlayerGui")
 
-_G.BloodHack.MainPanel = Instance.new("Frame", _G.BloodHack.ScreenGui)
-_G.BloodHack.MainPanel.Size = UDim2.new(0, 0, 0, 0)
-_G.BloodHack.MainPanel.Position = UDim2.new(0.5, 0, 0.5, 0)
-_G.BloodHack.MainPanel.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
-_G.BloodHack.MainPanel.BorderSizePixel = 0
-_G.BloodHack.MainPanel.Active = true
-_G.BloodHack.MainPanel.Draggable = true
-_G.BloodHack.MainPanel.ClipsDescendants = true
-
-_G.BloodHack.CanvasGroup = Instance.new("CanvasGroup", _G.BloodHack.MainPanel)
-_G.BloodHack.CanvasGroup.Size = UDim2.new(1, 0, 1, 0)
-_G.BloodHack.CanvasGroup.BackgroundTransparency = 1
-_G.BloodHack.CanvasGroup.GroupTransparency = 1
-
-Instance.new("UICorner", _G.BloodHack.MainPanel).CornerRadius = UDim.new(0, 8)
-local UIStroke = Instance.new("UIStroke", _G.BloodHack.MainPanel)
-UIStroke.Thickness, UIStroke.Color = 1, Color3.fromRGB(30, 30, 35)
-
-local TopHeader = Instance.new("Frame", _G.BloodHack.CanvasGroup)
-TopHeader.Size = UDim2.new(1, 0, 0, 35)
-TopHeader.BackgroundTransparency = 1 -- Починен белый фон заголовка
-
-local Title = Instance.new("TextLabel", TopHeader)
-Title.Size = UDim2.new(0, 200, 1, 0)
-Title.Position = UDim2.new(0, 12, 0, 0)
-Title.Text = "BloodHack || Rivals || v1.0.0" -- Новое название чита
-Title.TextColor3 = Color3.fromRGB(200, 200, 200)
-Title.Font = Enum.Font.GothamSemibold
-Title.TextSize = 12
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.BackgroundTransparency = 1
-
-_G.BloodHack.createMenuRow = function(name, heightPos, parentFrame)
-    local row = Instance.new("Frame", parentFrame)
-    row.Size = UDim2.new(1, 0, 0, 40)
-    row.Position = UDim2.new(0, 0, 0, heightPos)
-    row.BackgroundColor3 = Color3.fromRGB(22, 22, 26)
-    row.BorderSizePixel = 0
-    Instance.new("UICorner", row).CornerRadius = UDim.new(0, 6)
-    local s = Instance.new("UIStroke", row) s.Color = Color3.fromRGB(32, 32, 38)
-    
-    local lbl = Instance.new("TextLabel", row)
-    lbl.Size = UDim2.new(0, 150, 1, 0)
-    lbl.Position = UDim2.new(0, 12, 0, 0)
-    lbl.Text = name
-    lbl.TextColor3 = Color3.fromRGB(180, 180, 185)
-    lbl.Font = Enum.Font.GothamSemibold
-    lbl.TextSize = 11
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.BackgroundTransparency = 1
-    return row
+if TargetParent:FindFirstChild("BloodHackRivals") then 
+    TargetParent.BloodHackRivals:Destroy() 
 end
 
-_G.BloodHack.createSwitch = function(name, pos, default, parentFrame, callback)
-    local row = _G.BloodHack.createMenuRow(name, pos, parentFrame)
-    local pwr = Instance.new("TextButton", row)
-    pwr.Size = UDim2.new(0, 36, 0, 18)
-    pwr.Position = UDim2.new(1, -48, 0.5, -9)
-    pwr.BackgroundColor3 = default and Color3.fromRGB(110, 60, 255) or Color3.fromRGB(45, 45, 50)
-    pwr.Text = ""
-    Instance.new("UICorner", pwr).CornerRadius = UDim.new(1, 0)
+_G.BloodHack = _G.BloodHack or {}
+
+local sg = Instance.new("ScreenGui", TargetParent)
+sg.Name, sg.ResetOnSpawn = "BloodHackRivals", false
+_G.BloodHack.ScreenGui = sg
+
+local mp = Instance.new("Frame", sg)
+mp.Size = UDim2.new(0, 0, 0, 0)
+mp.Position = UDim2.new(0.5, 0, 0.5, 0)
+mp.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
+mp.BorderSizePixel = 0
+mp.Active, mp.Draggable = true, true
+mp.ClipsDescendants = true
+_G.BloodHack.MainPanel = mp
+
+local cg = Instance.new("CanvasGroup", mp)
+cg.Size = UDim2.new(1, 0, 1, 0)
+cg.BackgroundTransparency = 1
+cg.GroupTransparency = 1
+_G.BloodHack.CanvasGroup = cg
+
+Instance.new("UICorner", mp).CornerRadius = UDim.new(0, 8)
+local s = Instance.new("UIStroke", mp)
+s.Thickness, s.Color = 1, Color3.fromRGB(30, 30, 35)
+
+local th = Instance.new("Frame", cg)
+th.Size = UDim2.new(1, 0, 0, 35)
+th.BackgroundTransparency = 1
+
+local tl = Instance.new("TextLabel", th)
+tl.Size = UDim2.new(0, 200, 1, 0)
+tl.Position = UDim2.new(0, 12, 0, 0)
+tl.Text = "BloodHack || Rivals || v1.0.0"
+tl.TextColor3 = Color3.fromRGB(200, 200, 200)
+tl.Font = Enum.Font.GothamSemibold
+tl.TextSize = 12
+tl.TextXAlignment = Enum.TextXAlignment.Left
+tl.BackgroundTransparency = 1
+
+_G.BloodHack.createMenuRow = function(name, pos, frame)
+    local r = Instance.new("Frame", frame)
+    r.Size = UDim2.new(1, 0, 0, 40)
+    r.Position = UDim2.new(0, 0, 0, pos)
+    r.BackgroundColor3 = Color3.fromRGB(22, 22, 26)
+    r.BorderSizePixel = 0
+    Instance.new("UICorner", r).CornerRadius = UDim.new(0, 6)
+    Instance.new("UIStroke", r).Color = Color3.fromRGB(32, 32, 38)
     
-    local dot = Instance.new("Frame", pwr)
-    dot.Size = UDim2.new(0, 12, 0, 12)
-    dot.Position = default and UDim2.new(1, -15, 0.5, -6) or UDim2.new(0, 3, 0.5, -6)
-    dot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
+    local l = Instance.new("TextLabel", r)
+    l.Size = UDim2.new(0, 150, 1, 0)
+    l.Position = UDim2.new(0, 12, 0, 0)
+    l.Text = name
+    l.TextColor3 = Color3.fromRGB(180, 180, 185)
+    l.Font = Enum.Font.GothamSemibold
+    l.TextSize = 11
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    l.BackgroundTransparency = 1
+    return r
+end
+
+_G.BloodHack.createSwitch = function(name, pos, def, frame, cb)
+    local r = _G.BloodHack.createMenuRow(name, pos, frame)
+    local p = Instance.new("TextButton", r)
+    p.Size = UDim2.new(0, 36, 0, 18)
+    p.Position = UDim2.new(1, -48, 0.5, -9)
+    p.BackgroundColor3 = def and Color3.fromRGB(110,60,255) 
+        or Color3.fromRGB(45, 45, 50)
+    p.Text = ""
+    Instance.new("UICorner", p).CornerRadius = UDim.new(1, 0)
     
-    pwr.MouseButton1Click:Connect(function()
-        default = not default
-        game:GetService("TweenService"):Create(pwr, TweenInfo.new(0.2), {BackgroundColor3 = default and Color3.fromRGB(110, 60, 255) or Color3.fromRGB(45, 45, 50)}):Play()
-        game:GetService("TweenService"):Create(dot, TweenInfo.new(0.2), {Position = default and UDim2.new(1, -15, 0.5, -6) or UDim2.new(0, 3, 0.5, -6)}):Play()
-        callback(default)
+    local d = Instance.new("Frame", p)
+    d.Size = UDim2.new(0, 12, 0, 12)
+    d.Position = def and UDim2.new(1, -15, 0.5, -6) 
+        or UDim2.new(0, 3, 0.5, -6)
+    d.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Instance.new("UICorner", d).CornerRadius = UDim.new(1, 0)
+    
+    p.MouseButton1Click:Connect(function()
+        def = not def
+        local TS = game:GetService("TweenService")
+        TS:Create(p, TweenInfo.new(0.2), {
+            BackgroundColor3 = def and Color3.fromRGB(110,60,255) 
+                or Color3.fromRGB(45, 45, 50)
+        }):Play()
+        TS:Create(d, TweenInfo.new(0.2), {
+            Position = def and UDim2.new(1, -15, 0.5, -6) 
+                or UDim2.new(0, 3, 0.5, -6)
+        }):Play()
+        cb(def)
     end)
 end
-local TabContainer = Instance.new("Frame", _G.BloodHack.CanvasGroup)
-TabContainer.Size = UDim2.new(1, -24, 0, 30)
-TabContainer.Position = UDim2.new(0, 12, 0, 35)
-TabContainer.BackgroundTransparency = 1
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local UIS = game:GetService("UserInputService")
+local RS = game:GetService("RunService")
+local TS = game:GetService("TweenService")
 
-local MainTab = Instance.new("TextButton", TabContainer)
-MainTab.Size = UDim2.new(0, 65, 1, 0)
-MainTab.BackgroundColor3 = Color3.fromRGB(110, 60, 255)
-MainTab.Text = "Main"
-MainTab.TextColor3 = Color3.fromRGB(255, 255, 255)
-MainTab.Font = Enum.Font.GothamBold
-MainTab.TextSize = 11
-Instance.new("UICorner", MainTab).CornerRadius = UDim.new(0, 6)
+local tc = Instance.new("Frame", _G.BloodHack.CanvasGroup)
+tc.Size = UDim2.new(1, -24, 0, 30)
+tc.Position = UDim2.new(0, 12, 0, 35)
+tc.BackgroundTransparency = 1
 
-local VisualTab = Instance.new("TextButton", TabContainer)
-VisualTab.Size = UDim2.new(0, 65, 1, 0)
-VisualTab.Position = UDim2.new(0, 72, 0, 0)
-VisualTab.BackgroundColor3 = Color3.fromRGB(25, 25, 28)
-VisualTab.Text = "Visual"
-VisualTab.TextColor3 = Color3.fromRGB(160, 160, 165)
-VisualTab.Font = Enum.Font.GothamBold
-VisualTab.TextSize = 11
-Instance.new("UICorner", VisualTab).CornerRadius = UDim.new(0, 6)
-Instance.new("UIStroke", VisualTab).Color = Color3.fromRGB(40, 40, 45)
+local mt = Instance.new("TextButton", tc)
+mt.Size = UDim2.new(0, 65, 1, 0)
+mt.BackgroundColor3 = Color3.fromRGB(110, 60, 255)
+mt.Text = "Main"
+mt.TextColor3 = Color3.fromRGB(255, 255, 255)
+mt.Font = Enum.Font.GothamBold
+mt.TextSize = 11
+Instance.new("UICorner", mt).CornerRadius = UDim.new(0, 6)
 
-local Container = Instance.new("Frame", _G.BloodHack.CanvasGroup)
-Container.Size = UDim2.new(1, -24, 1, -85)
-Container.Position = UDim2.new(0, 12, 0, 75)
-Container.BackgroundTransparency = 1
+local vt = Instance.new("TextButton", tc)
+vt.Size = UDim2.new(0, 65, 1, 0)
+vt.Position = UDim2.new(0, 72, 0, 0)
+vt.BackgroundColor3 = Color3.fromRGB(25, 25, 28)
+vt.Text = "Visual"
+vt.TextColor3 = Color3.fromRGB(160, 160, 165)
+vt.Font = Enum.Font.GothamBold
+vt.TextSize = 11
+Instance.new("UICorner", vt).CornerRadius = UDim.new(0, 6)
+Instance.new("UIStroke", vt).Color = Color3.fromRGB(40, 40, 45)
 
-local MainFrame = Instance.new("Frame", Container)
-MainFrame.Size = UDim2.new(1, 0, 1, 0)
-MainFrame.BackgroundTransparency = 1
+local ct = Instance.new("Frame", _G.BloodHack.CanvasGroup)
+ct.Size = UDim2.new(1, -24, 1, -85)
+ct.Position = UDim2.new(0, 12, 0, 75)
+ct.BackgroundTransparency = 1
 
-local VisualFrame = Instance.new("Frame", Container)
-VisualFrame.Size = UDim2.new(1, 0, 1, 0)
-VisualFrame.BackgroundTransparency = 1
-VisualFrame.Visible = false
+local mf = Instance.new("Frame", ct)
+mf.Size = UDim2.new(1, 0, 1, 0)
+mf.BackgroundTransparency = 1
+
+local vf = Instance.new("Frame", ct)
+vf.Size = UDim2.new(1, 0, 1, 0)
+vf.BackgroundTransparency = 1
+vf.Visible = false
 
 local function switchTab(tab)
     _G.BloodHack.CurrentTab = tab
-    MainFrame.Visible = (tab == "Main")
-    VisualFrame.Visible = (tab == "Visual")
-    game:GetService("TweenService"):Create(MainTab, TweenInfo.new(0.2), {BackgroundColor3 = (tab == "Main") and Color3.fromRGB(110, 60, 255) or Color3.fromRGB(25, 25, 28), TextColor3 = (tab == "Main") and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(160, 160, 165)}):Play()
-    game:GetService("TweenService"):Create(VisualTab, TweenInfo.new(0.2), {BackgroundColor3 = (tab == "Visual") and Color3.fromRGB(110, 60, 255) or Color3.fromRGB(25, 25, 28), TextColor3 = (tab == "Visual") and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(160, 160, 165)}):Play()
+    mf.Visible = (tab == "Main")
+    vf.Visible = (tab == "Visual")
+    local c1 = (tab == "Main") and Color3.fromRGB(110,60,255) 
+        or Color3.fromRGB(25,25,28)
+    local c2 = (tab == "Visual") and Color3.fromRGB(110,60,255) 
+        or Color3.fromRGB(25,25,28)
+    TS:Create(mt, TweenInfo.new(0.2), {BackgroundColor3 = c1}):Play()
+    TS:Create(vt, TweenInfo.new(0.2), {BackgroundColor3 = c2}):Play()
 end
 
-MainTab.MouseButton1Click:Connect(function() switchTab("Main") end)
-VisualTab.MouseButton1Click:Connect(function() switchTab("Visual") end)
+mt.MouseButton1Click:Connect(function() switchTab("Main") end)
+vt.MouseButton1Click:Connect(function() switchTab("Visual") end)
 
-_G.BloodHack.createSwitch("Silent Aim (Key: E)", 0, _G.BloodHack.AimbotEnabled, MainFrame, function(v) _G.BloodHack.AimbotEnabled = v _G.BloodHack.FOVCircle.Visible = v end)
-_G.BloodHack.createSwitch("Triggerbot", 46, _G.BloodHack.TriggerbotEnabled, MainFrame, function(v) _G.BloodHack.TriggerbotEnabled = v end)
-
-local SmoothRow = _G.BloodHack.createMenuRow("Smoothness", 92, MainFrame)
-local SmoothBtn = Instance.new("TextButton", SmoothRow)
-SmoothBtn.Size = UDim2.new(0, 80, 0, 24)
-SmoothBtn.Position = UDim2.new(1, -92, 0.5, -12)
-SmoothBtn.BackgroundColor3 = Color3.fromRGB(110, 60, 255)
-SmoothBtn.Text = tostring(_G.BloodHack.SMOOTHNESS)
-SmoothBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-SmoothBtn.Font = Enum.Font.GothamBold
-SmoothBtn.TextSize = 11
-Instance.new("UICorner", SmoothBtn).CornerRadius = UDim.new(0, 4)
-SmoothBtn.MouseButton1Click:Connect(function()
-    _G.BloodHack.SMOOTHNESS = _G.BloodHack.SMOOTHNESS >= 5 and 1 or _G.BloodHack.SMOOTHNESS + 1
-    SmoothBtn.Text = tostring(_G.BloodHack.SMOOTHNESS)
+_G.BloodHack.createSwitch("Silent Aim (Key: E)", 0, 
+    _G.BloodHack.AimbotEnabled, mf, function(v) 
+    _G.BloodHack.AimbotEnabled = v 
+    _G.BloodHack.FOVCircle.Visible = v 
 end)
 
-local BoneRow = _G.BloodHack.createMenuRow("Target Body Part", 138, MainFrame)
-local BoneBtn = Instance.new("TextButton", BoneRow)
-BoneBtn.Size = UDim2.new(0, 80, 0, 24)
-BoneBtn.Position = UDim2.new(1, -92, 0.5, -12)
-BoneBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-BoneBtn.Text = _G.BloodHack.TARGET_PART
-BoneBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-BoneBtn.Font = Enum.Font.GothamSemibold
-BoneBtn.TextSize = 10
-Instance.new("UICorner", BoneBtn).CornerRadius = UDim.new(0, 4)
-Instance.new("UIStroke", BoneBtn).Color = Color3.fromRGB(55, 55, 60)
-BoneBtn.MouseButton1Click:Connect(function()
-    _G.BloodHack.TARGET_PART = (_G.BloodHack.TARGET_PART == "Head") and "HumanoidRootPart" or "Head"
-    BoneBtn.Text = (_G.BloodHack.TARGET_PART == "Head") and "Head" or "Chest"
+_G.BloodHack.createSwitch("Triggerbot", 46, 
+    _G.BloodHack.TriggerbotEnabled, mf, function(v) 
+    _G.BloodHack.TriggerbotEnabled = v 
 end)
 
-_G.BloodHack.createSwitch("Show Wallhack ESP+", 0, _G.BloodHack.ESPEnabled, VisualFrame, function(v)
+local smr = _G.BloodHack.createMenuRow("Smoothness", 92, mf)
+local smb = Instance.new("TextButton", smr)
+smb.Size = UDim2.new(0, 80, 0, 24)
+smb.Position = UDim2.new(1, -92, 0.5, -12)
+smb.BackgroundColor3 = Color3.fromRGB(110, 60, 255)
+smb.Text = tostring(_G.BloodHack.SMOOTHNESS)
+smb.TextColor3 = Color3.fromRGB(255, 255, 255)
+smb.Font = Enum.Font.GothamBold
+smb.TextSize = 11
+Instance.new("UICorner", smb).CornerRadius = UDim.new(0, 4)
+smb.MouseButton1Click:Connect(function()
+    _G.BloodHack.SMOOTHNESS = _G.BloodHack.SMOOTHNESS >= 5 
+        and 1 or _G.BloodHack.SMOOTHNESS + 1
+    smb.Text = tostring(_G.BloodHack.SMOOTHNESS)
+end)
+
+local bnr = _G.BloodHack.createMenuRow("Target Body Part", 138, mf)
+local bnb = Instance.new("TextButton", bnr)
+bnb.Size = UDim2.new(0, 80, 0, 24)
+bnb.Position = UDim2.new(1, -92, 0.5, -12)
+bnb.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+bnb.Text = _G.BloodHack.TARGET_PART
+bnb.TextColor3 = Color3.fromRGB(200, 200, 200)
+bnb.Font = Enum.Font.GothamSemibold
+bnb.TextSize = 10
+Instance.new("UICorner", bnb).CornerRadius = UDim.new(0, 4)
+Instance.new("UIStroke", bnb).Color = Color3.fromRGB(55, 55, 60)
+bnb.MouseButton1Click:Connect(function()
+    _G.BloodHack.TARGET_PART = (_G.BloodHack.TARGET_PART == "Head") 
+        and "HumanoidRootPart" or "Head"
+    bnb.Text = (_G.BloodHack.TARGET_PART == "Head") 
+        and "Head" or "Chest"
+end)
+
+_G.BloodHack.createSwitch("Show Wallhack ESP+", 0, 
+    _G.BloodHack.ESPEnabled, vf, function(v)
     _G.BloodHack.ESPEnabled = v
-    if not v then for p, _ in pairs(_G.BloodHack.ESP_Cache) do _G.BloodHack.removeDrawingESP(p) end end
+    if not v then 
+        for p, _ in pairs(_G.BloodHack.ESP_Cache) do 
+            _G.BloodHack.removeDrawingESP(p) 
+        end 
+    end
 end)
 
 local function setMenuVisible(visible)
     if _G.BloodHack.TweensActive then return end
     _G.BloodHack.TweensActive = true
-    local tInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+    local ti = TweenInfo.new(0.3, Enum.EasingStyle.Quart, 
+        Enum.EasingDirection.Out)
+    
     if visible then
         _G.BloodHack.MainPanel.Visible = true
-        local sizeTween = game:GetService("TweenService"):Create(_G.BloodHack.MainPanel, tInfo, {Size = UDim2.new(0, 300, 0, 360), Position = UDim2.new(0.5, -150, 0.5, -180)})
-        local alphaTween = game:GetService("TweenService"):Create(_G.BloodHack.CanvasGroup, tInfo, {GroupTransparency = 0})
-        sizeTween:Play() alphaTween:Play() sizeTween.Completed:Wait()
+        TS:Create(_G.BloodHack.MainPanel, ti, {
+            Size = UDim2.new(0, 300, 0, 360), 
+            Position = UDim2.new(0.5, -150, 0.5, -180)
+        }):Play()
+        local a = TS:Create(_G.BloodHack.CanvasGroup, ti, {
+            GroupTransparency = 0
+        })
+        a:Play() a.Completed:Wait()
     else
-        local sizeTween = game:GetService("TweenService"):Create(_G.BloodHack.MainPanel, tInfo, {Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0.5, 0)})
-        local alphaTween = game:GetService("TweenService"):Create(_G.BloodHack.CanvasGroup, tInfo, {GroupTransparency = 1})
-        sizeTween:Play() alphaTween:Play() sizeTween.Completed:Wait()
+        TS:Create(_G.BloodHack.MainPanel, ti, {
+            Size = UDim2.new(0, 0, 0, 0), 
+            Position = UDim2.new(0.5, 0, 0.5, 0)
+        }):Play()
+        local a = TS:Create(_G.BloodHack.CanvasGroup, ti, {
+            GroupTransparency = 1
+        })
+        a:Play() a.Completed:Wait()
         _G.BloodHack.MainPanel.Visible = false
     end
     _G.BloodHack.TweensActive = false
 end
 
-game:GetService("UserInputService").InputBegan:Connect(function(i, p)
+UIS.InputBegan:Connect(function(i, p)
     if not p and i.KeyCode == _G.BloodHack.TOGGLE_KEY then
         _G.BloodHack.MenuVisible = not _G.BloodHack.MenuVisible
         setMenuVisible(_G.BloodHack.MenuVisible)
+    elseif i.KeyCode == _G.BloodHack.AIM_KEY then
+        _G.BloodHack.Holding = true
     end
 end)
 
-game:GetService("RunService").RenderStepped:Connect(function()
-    if _G.BloodHack.AimbotEnabled and _G.BloodHack.FOVCircle.Visible then
-        local mouseLocation = game:GetService("UserInputService"):GetMouseLocation()
-        _G.BloodHack.FOVCircle.Position = mouseLocation
-        _G.BloodHack.FOVCircle.Radius = _G.BloodHack.FOV_RADIUS
+UIS.InputEnded:Connect(function(i)
+    if i.KeyCode == _G.BloodHack.AIM_KEY then
+        _G.BloodHack.Holding = false
     end
 end)
 
--- Запуск анимации появления при инжекте
+RS.RenderStepped:Connect(function()
+    local mouse = UIS:GetMouseLocation()
+    _G.BloodHack.FOVCircle.Position = mouse
+    _G.BloodHack.FOVCircle.Radius = _G.BloodHack.FOV_RADIUS
+
+    if _G.BloodHack.AimbotEnabled and _G.BloodHack.Holding 
+       and _G.BloodHack.getClosestPlayer then
+        local t = _G.BloodHack.getClosestPlayer()
+        if t and t.Character then
+            local part = t.Character:FindFirstChild(
+                _G.BloodHack.TARGET_PART
+            )
+            if part then
+                local pos, onScreen = 
+                    Camera:WorldToViewportPoint(part.Position)
+                if onScreen then
+                    local move = (Vector2.new(pos.X, pos.Y) 
+                                 - mouse) / _G.BloodHack.SMOOTHNESS
+                    if mousemoverel then mousemoverel(move.X, move.Y) end
+                end
+            end
+        end
+    end
+
+    if _G.BloodHack.TriggerbotEnabled then
+        local r = Camera:ViewportPointToRay(mouse.X, mouse.Y)
+        local res = workspace:Raycast(r.Origin, r.Direction * 1000)
+        if res and res.Instance then
+            local model = res.Instance:FindFirstAncestorOfClass("Model")
+            if model then
+                local p = Players:GetPlayerFromCharacter(model)
+                if p and p ~= LocalPlayer and (p.Team ~= LocalPlayer.Team 
+                   or p.Team == nil) then
+                    if mouse1click then mouse1click() task.wait(0.07) end
+                end
+            end
+        end
+    end
+
+    if _G.BloodHack.ESPEnabled then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character then
+                local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+                local hum = p.Character:FindFirstChildOfClass("Humanoid")
+                if hrp and hum and hum.Health > 0 and 
+                   (p.Team ~= LocalPlayer.Team or p.Team == nil) then
+                    
+                    if not _G.BloodHack.ESP_Cache[p] then
+                        _G.BloodHack.ESP_Cache[p] = {
+                            Box = Drawing.new("Square"),
+                            Name = Drawing.new("Text")
+                        }
+                    end
+
+                    local c = _G.BloodHack.ESP_Cache[p]
+                    local vec, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+
+                    if onScreen then
+                        local sx, sy = 2000 / vec.Z, 3000 / vec.Z
+                        c.Box.Size = Vector2.new(sx, sy)
+                        c.Box.Position = Vector2.new(vec.X - sx/2, vec.Y - sy/2)
+                        c.Box.Color = Color3.fromRGB(255, 50, 50)
+                        c.Box.Thickness = 1.5
+                        c.Box.Filled = false
+                        c.Box.Visible = true
+
+                        c.Name.Text = p.Name
+                        c.Name.Size = 14
+                        c.Name.Position = Vector2.new(vec.X - 
+                            c.Name.TextBounds.X / 2, (vec.Y - sy / 2) - 16)
+                        c.Name.Color = Color3.fromRGB(255, 255, 255)
+                        c.Name.Outline = true
+                        c.Name.Visible = true
+                    else
+                        c.Box.Visible = false c.Name.Visible = false
+                    end
+                else
+                    _G.BloodHack.removeDrawingESP(p)
+                end
+            end
+        end
+    end
+end)
+
 setMenuVisible(true)
