@@ -13,7 +13,7 @@ local Holding, MenuVisible, TweensActive = false, true, false
 
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Thickness = 1.5
-FOVCircle.Color = Color3.fromRGB(200, 200, 200) -- Спокойный серый круг FOV
+FOVCircle.Color = Color3.fromRGB(200, 200, 200)
 FOVCircle.Filled = false
 FOVCircle.Visible = false
 FOVCircle.Transparency = 0.5
@@ -35,7 +35,7 @@ ScreenGui.Name, ScreenGui.ResetOnSpawn = "RivalsUltimateMenu", false
 local MainPanel = Instance.new("Frame", ScreenGui)
 MainPanel.Size = UDim2.new(0, 260, 0, 350)
 MainPanel.Position = UDim2.new(0.5, -130, 0.5, 300)
-MainPanel.BackgroundColor3 = Color3.fromRGB(18, 18, 18) -- Глубокий матовый черный
+MainPanel.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
 MainPanel.BackgroundTransparency = 1
 MainPanel.BorderSizePixel = 0
 MainPanel.Active, MainPanel.Draggable = true, true
@@ -43,11 +43,11 @@ Instance.new("UICorner", MainPanel).CornerRadius = UDim.new(0, 10)
 
 local UIStroke = Instance.new("UIStroke", MainPanel)
 UIStroke.Thickness = 1.5
-UIStroke.Color = Color3.fromRGB(45, 45, 48) -- Строгая темно-серая обводка панели
+UIStroke.Color = Color3.fromRGB(45, 45, 48)
 UIStroke.Transparency = 1
 local Header = Instance.new("Frame", MainPanel)
 Header.Size = UDim2.new(1, 0, 0, 48)
-Header.BackgroundColor3 = Color3.fromRGB(28, 28, 30) -- Графитовый серый для шапки
+Header.BackgroundColor3 = Color3.fromRGB(28, 28, 30)
 Header.BackgroundTransparency = 1
 Header.BorderSizePixel = 0
 Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 10)
@@ -62,7 +62,7 @@ HeaderFix.BorderSizePixel = 0
 local Title = Instance.new("TextLabel", Header)
 Title.Size = UDim2.new(1, 0, 1, 0)
 Title.Text = "RIVALS PREMIUM"
-Title.TextColor3 = Color3.fromRGB(240, 240, 240) -- Мягкий белый текст
+Title.TextColor3 = Color3.fromRGB(240, 240, 240)
 Title.TextTransparency = 1
 Title.BackgroundTransparency = 1
 Title.Font = Enum.Font.GothamBold
@@ -78,7 +78,7 @@ local function createModernBtn(text, pos, isToggle)
     btn.Size = UDim2.new(0, 230, 0, 42)
     btn.Position = UDim2.new(0.5, -115, 0, pos)
     btn.Text = isToggle and "  "..text or text
-    btn.BackgroundColor3 = Color3.fromRGB(28, 28, 30) -- Серые кнопки
+    btn.BackgroundColor3 = Color3.fromRGB(28, 28, 30)
     btn.BackgroundTransparency = 1
     btn.TextColor3 = Color3.fromRGB(200, 200, 200)
     btn.TextTransparency = 1
@@ -89,7 +89,7 @@ local function createModernBtn(text, pos, isToggle)
     
     local s = Instance.new("UIStroke", btn)
     s.Thickness = 1
-    s.Color = Color3.fromRGB(45, 45, 48) -- Аккуратные границы кнопок
+    s.Color = Color3.fromRGB(45, 45, 48)
     s.Transparency = 1
     
     local ind = nil
@@ -97,7 +97,7 @@ local function createModernBtn(text, pos, isToggle)
         ind = Instance.new("Frame", btn)
         ind.Size = UDim2.new(0, 8, 0, 8)
         ind.Position = UDim2.new(1, -22, 0.5, -4)
-        ind.BackgroundColor3 = Color3.fromRGB(120, 120, 125) -- Серый индикатор (выключено)
+        ind.BackgroundColor3 = Color3.fromRGB(120, 120, 125)
         ind.BackgroundTransparency = 1
         Instance.new("UICorner", ind).CornerRadius = UDim.new(1, 0)
     end
@@ -182,8 +182,8 @@ EspBtn.MouseButton1Click:Connect(function()
         for _, p in ipairs(Players:GetPlayers()) do
             if p.Character then
                 if p.Character:FindFirstChild("VHEffect") then p.Character.VHEffect:Destroy() end
-                if p.Character:FindFirstChild("Head") and p.Character.Head:FindFirstChild("ESP_Billboard") then
-                    p.Character.Head.ESP_Billboard:Destroy()
+                if p.Character:FindFirstChild("HumanoidRootPart") and p.Character.HumanoidRootPart:FindFirstChild("ESP_UI") then
+                    p.Character.HumanoidRootPart.ESP_UI:Destroy()
                 end
             end
         end
@@ -254,37 +254,50 @@ task.spawn(function()
 end)
 
 task.spawn(function()
-    while task.wait(0.3) do
+    while task.wait(0.2) do
         if ESPEnabled then
             for _, p in ipairs(Players:GetPlayers()) do
                 if p ~= LocalPlayer and p.Character and (p.Team ~= LocalPlayer.Team or not p.Team) then
                     local hum = p.Character:FindFirstChildOfClass("Humanoid")
-                    if hum and hum.Health > 0 then
+                    local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+                    
+                    if hum and hum.Health > 0 and hrp then
                         local hl = p.Character:FindFirstChild("VHEffect") or Instance.new("Highlight")
                         hl.Name = "VHEffect"
                         hl.FillOriginalColors = true
-                        hl.FillColor = Color3.fromRGB(255, 255, 255)
-                        hl.FillTransparency = 0.8 -- Очень легкий белый силуэт сквозь стены
-                        hl.OutlineColor = Color3.fromRGB(200, 200, 200)
-                        hl.OutlineTransparency = 0.3
+                        hl.FillTransparency = 0.85
+                        hl.OutlineColor = Color3.fromRGB(180, 180, 180)
+                        hl.OutlineTransparency = 0.4
                         hl.Parent = p.Character
                         
-                        if p.Character:FindFirstChild("Head") then
-                            local bb = p.Character.Head:FindFirstChild("ESP_Billboard") or Instance.new("BillboardGui")
-                            bb.Name, bb.Size, bb.AlwaysOnTop, bb.ExtentsOffset, bb.Parent = "ESP_Billboard", UDim2.new(0, 200, 0, 50), true, Vector3.new(0, 2.5, 0), p.Character.Head
-                            
-                            local tl = bb:FindFirstChild("TextLabel") or Instance.new("TextLabel", bb)
-                            tl.Size, tl.BackgroundTransparency = UDim2.new(1, 0, 1, 0), 1
-                            tl.TextColor3, tl.Font, tl.TextSize = Color3.fromRGB(240, 240, 240), Enum.Font.GothamBold, 11
-                            tl.Text = p.Name .. " [" .. math.floor(hum.Health) .. " HP]"
-                        end
+                        local bb = hrp:FindFirstChild("ESP_UI") or Instance.new("BillboardGui")
+                        bb.Name, bb.Size, bb.AlwaysOnTop, bb.Parent = "ESP_UI", UDim2.new(4, 0, 5.5, 0), true, hrp
+                        
+                        local nick = bb:FindFirstChild("Nick") or Instance.new("TextLabel", bb)
+                        nick.Name = "Nick"
+                        nick.Size, nick.Position, nick.BackgroundTransparency = UDim2.new(1, 0, 0, 15), UDim2.new(0, 0, 0, -20), 1
+                        nick.TextColor3, nick.Font, nick.TextSize, nick.Text = Color3.fromRGB(240, 240, 240), Enum.Font.GothamBold, 10, p.Name
+                        
+                        local healthBg = bb:FindFirstChild("HealthBg") or Instance.new("Frame", bb)
+                        healthBg.Name = "HealthBg"
+                        healthBg.Size, healthBg.Position, healthBg.BackgroundColor3, healthBg.BorderSizePixel = UDim2.new(0, 4, 1, 0), UDim2.new(0, -10, 0, 0), Color3.fromRGB(40, 40, 42), 0
+                        
+                        local healthBar = healthBg:FindFirstChild("HealthBar") or Instance.new("Frame", healthBg)
+                        healthBar.Name = "HealthBar"
+                        healthBar.BorderSizePixel = 0
+                        
+                        local healthRatio = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
+                        healthBar.Size = UDim2.new(1, 0, healthRatio, 0)
+                        healthBar.Position = UDim2.new(0, 0, 1 - healthRatio, 0)
+                        healthBar.BackgroundColor3 = Color3.fromRGB(255 - (255 * healthRatio), 255 * healthRatio, 0)
                     else
-                        if p.Character:FindFirstChild("VHEffect") then p.Character.VHEffect:Destroy() end
-                        if p.Character:FindFirstChild("Head") and p.Character.Head:FindFirstChild("ESP_Billboard") then p.Character.Head.ESP_Billboard:Destroy() end
+                        if p.Character and p.Character:FindFirstChild("VHEffect") then p.Character.VHEffect:Destroy() end
+                        if hrp and hrp:FindFirstChild("ESP_UI") then hrp.ESP_UI:Destroy() end
                     end
                 elseif p.Character then
                     if p.Character:FindFirstChild("VHEffect") then p.Character.VHEffect:Destroy() end
-                    if p.Character:FindFirstChild("Head") and p.Character.Head:FindFirstChild("ESP_Billboard") then p.Character.Head.ESP_Billboard:Destroy() end
+                    local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+                    if hrp and hrp:FindFirstChild("ESP_UI") then hrp.ESP_UI:Destroy() end
                 end
             end
         end
